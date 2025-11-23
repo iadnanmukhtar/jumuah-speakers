@@ -1,0 +1,51 @@
+<section class="max-w-md mx-auto mt-10 bg-white shadow-sm rounded-lg p-6 border border-emerald-100">
+  <h1 class="text-2xl font-semibold text-emerald-800 mb-1 text-center">Speaker Registration</h1>
+  <p class="text-sm text-slate-500 mb-6 text-center">
+    Register with your phone number to volunteer as a Jumuah khateeb or dua leader.
+  </p>
+
+  <form action="/register" method="post" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Name</label>
+      <input
+        type="text"
+        name="name"
+        required
+        class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+      <input
+        type="tel"
+        name="phone"
+        required
+        placeholder="+1..."
+        class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Email (optional)</label>
+      <input
+        type="email"
+        name="email"
+        class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Short bio (optional)</label>
+      <textarea
+        name="bio"
+        rows="3"
+        class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"></textarea>
+    </div>
+
+    <button
+      type="submit"
+      class="w-full py-2 rounded bg-emerald-700 text-white text-sm font-medium hover:bg-emerald-800">
+      Register
+    </button>
+  </form>
+
+  <p class="mt-4 text-xs text-center text-slate-500">
+    Already registered?
+    <a href="/login" class="text-emerald-700 hover:underline">Login here</a>.
+  </p>
+</section>

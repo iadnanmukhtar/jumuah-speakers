@@ -1,0 +1,219 @@
+<%
+  const formatDate = d => {
+    const dateObj = d instanceof Date ? d : new Date(d);
+    if (isNaN(dateObj)) return d;
+    return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  const formatTime = t => {
+    if (!t) return '';
+    const [hStr, mStr] = t.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (Number.isNaN(h) || Number.isNaN(m)) return t;
+    const date = new Date();
+    date.setHours(h, m, 0, 0);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+%>
+<section class="space-y-6">
+  <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-5">
+    <h1 class="text-xl font-semibold text-emerald-800 mb-1">Admin - Jumuah Schedules</h1>
+    <p class="text-sm text-slate-500">
+      Create, edit, and assign speakers for upcoming Jumuah prayers.
+      Standard times are 14:00 and 14:45, but you can adjust if needed.
+    </p>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-5">
+    <h2 class="text-lg font-semibold text-emerald-800 mb-3">Create New Schedule (optional)</h2>
+    <form action="/admin/schedules" method="post" class="grid gap-3 md:grid-cols-4 items-end">
+      <div>
+        <label class="block text-xs font-medium text-slate-700 mb-1">Date</label>
+        <input
+          type="date"
+          name="date"
+          required
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-700 mb-1">Time</label>
+        <input
+          type="time"
+          name="time"
+          required
+          value="14:00"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-700 mb-1">Topic (optional)</label>
+        <input
+          type="text"
+          name="topic"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-700 mb-1">Notes (optional)</label>
+        <input
+          type="text"
+          name="notes"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+      </div>
+      <div class="md:col-span-4 text-right mt-2">
+        <button
+          type="submit"
+          class="px-4 py-1.5 rounded-full bg-emerald-700 text-white text-sm font-medium hover:bg-emerald-800">
+          Create schedule
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-5">
+    <h2 class="text-lg font-semibold text-emerald-800 mb-3">All Schedules</h2>
+
+    <% if (!schedules || schedules.length === 0) { %>
+      <p class="text-sm text-slate-500">
+        No schedules yet. Auto-generation will create standard Friday slots, or you can add manually.
+      </p>
+    <% } else { %>
+      <div class="sm:hidden space-y-4">
+        <% schedules.forEach(s => { %>
+          <div class="border border-emerald-100 rounded-lg shadow-sm p-4 bg-white">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-slate-900 font-semibold">
+                  <%= formatDate(s.date) %>
+                </div>
+                <div class="text-sm text-slate-500"><%= formatTime(s.time) %></div>
+                <div class="text-xs text-slate-500 mt-1">Speaker: <%= s.speaker_name || 'Unassigned' %></div>
+              </div>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs
+                <%= s.status === 'confirmed'
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                    : 'bg-slate-100 text-slate-700 border border-slate-300' %>">
+                <%= s.status %>
+              </span>
+            </div>
+
+            <div class="mt-3 text-sm text-slate-700">
+              <div class="font-medium text-slate-900">Topic</div>
+              <div class="mt-1"><%= s.topic || 'TBD' %></div>
+              <% if (s.notes) { %>
+                <div class="text-xs text-slate-500 mt-1">Notes: <%= s.notes %></div>
+              <% } %>
+            </div>
+
+            <div class="mt-4 space-y-3">
+              <form action="/admin/schedules/<%= s.id %>/assign" method="post" class="space-y-2">
+                <label class="block text-xs font-medium text-slate-700">Assign speaker</label>
+                <select
+                  name="speaker_id"
+                  class="w-full border border-slate-300 rounded px-2 py-2 text-sm">
+                  <option value="">Unassigned</option>
+                  <% speakers.forEach(sp => { %>
+                    <option value="<%= sp.id %>" <%= s.speaker_id === sp.id ? 'selected' : '' %>>
+                      <%= sp.name %>
+                    </option>
+                  <% }) %>
+                </select>
+                <button
+                  class="w-full px-3 py-2 rounded-full bg-emerald-700 text-white text-xs hover:bg-emerald-800">
+                  Update
+                </button>
+              </form>
+
+              <div class="flex gap-2">
+                <a
+                  href="/admin/schedules/<%= s.id %>/edit"
+                  class="flex-1 px-3 py-2 rounded-full border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs text-center">
+                  Edit
+                </a>
+                <form action="/admin/schedules/<%= s.id %>/delete" method="post" onsubmit="return confirm('Delete this schedule?');" class="flex-1">
+                  <button
+                    class="w-full px-3 py-2 rounded-full border border-red-400 text-red-700 hover:bg-red-50 text-xs">
+                    Delete
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="hidden sm:block overflow-x-auto">
+        <table class="min-w-full text-xs md:text-sm">
+          <thead>
+            <tr class="bg-emerald-50 text-emerald-900">
+              <th class="py-2 px-3 text-left">Date</th>
+              <th class="py-2 px-3 text-left">Time</th>
+              <th class="py-2 px-3 text-left">Topic</th>
+              <th class="py-2 px-3 text-left">Speaker</th>
+              <th class="py-2 px-3 text-left">Status</th>
+              <th class="py-2 px-3 text-left">Assign</th>
+              <th class="py-2 px-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% schedules.forEach(s => { %>
+              <tr class="border-b border-slate-100 align-top">
+                <td class="py-2 px-3">
+                  <%= formatDate(s.date) %>
+                </td>
+                <td class="py-2 px-3"><%= formatTime(s.time) %></td>
+                <td class="py-2 px-3 text-slate-700"><%= s.topic || 'TBD' %></td>
+                <td class="py-2 px-3">
+                  <% if (s.speaker_name) { %>
+                    <%= s.speaker_name %>
+                  <% } else { %>
+                    Unassigned
+                  <% } %>
+                </td>
+                <td class="py-2 px-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs
+                    <%= s.status === 'confirmed'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-slate-100 text-slate-700 border border-slate-300' %>">
+                    <%= s.status %>
+                  </span>
+                </td>
+                <td class="py-2 px-3">
+                  <form action="/admin/schedules/<%= s.id %>/assign" method="post" class="flex gap-1 items-center">
+                    <select
+                      name="speaker_id"
+                      class="border border-slate-300 rounded px-1 py-1 text-xs">
+                      <option value="">Unassigned</option>
+                      <% speakers.forEach(sp => { %>
+                        <option value="<%= sp.id %>" <%= s.speaker_id === sp.id ? 'selected' : '' %>>
+                          <%= sp.name %>
+                        </option>
+                      <% }) %>
+                    </select>
+                    <button
+                      class="px-2 py-1 rounded bg-emerald-700 text-white text-xs hover:bg-emerald-800">
+                      Update
+                    </button>
+                  </form>
+                </td>
+                <td class="py-2 px-3 text-right">
+                  <div class="flex gap-1 justify-end">
+                    <a
+                      href="/admin/schedules/<%= s.id %>/edit"
+                      class="px-2 py-1 rounded-full border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs">
+                      Edit
+                    </a>
+                    <form action="/admin/schedules/<%= s.id %>/delete" method="post" onsubmit="return confirm('Delete this schedule?');">
+                      <button
+                        class="px-2 py-1 rounded-full border border-red-400 text-red-700 hover:bg-red-50 text-xs">
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</section>

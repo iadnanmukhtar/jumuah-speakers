@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= title || "Masjid al-Husna Jumuah Scheduling" %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="/assets/logo.png" />
+  <link rel="apple-touch-icon" href="/assets/logo.png" />
+  <meta property="og:image" content="/assets/logo.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            emerald: {
+              700: '#014570'
+            }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="min-h-full flex flex-col bg-gradient-to-b from-emerald-50 to-slate-100">
+  <header class="bg-white shadow-sm border-b border-emerald-100">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="h-9 w-9 rounded-full bg-emerald-700 flex items-center justify-center text-white font-bold overflow-hidden">
+          <img src="/assets/logo.png" alt="Masjid al-Husna" class="h-full w-full object-cover" />
+        </div>
+        <div>
+          <div class="text-emerald-800 font-semibold text-lg">
+            Masjid al-Husna
+          </div>
+          <div class="text-xs text-slate-500">
+            Jumuah Speaker Scheduling
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button
+          class="sm:hidden inline-flex items-center justify-center h-10 w-10 rounded-full border border-emerald-200 text-emerald-800"
+          id="mobile-menu-toggle"
+          aria-label="Toggle navigation">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <% if (currentUser) { %>
+          <nav class="hidden sm:flex items-center gap-3 text-sm">
+            <a href="/dashboard" class="hover:text-emerald-700 text-slate-700">Dashboard</a>
+            <a href="/profile" class="hover:text-emerald-700 text-slate-700">Profile</a>
+            <a href="/schedules" class="hover:text-emerald-700 text-slate-700">Schedules</a>
+
+            <% if (currentUser.is_admin) { %>
+              <a href="/admin/schedules" class="hover:text-emerald-700 text-slate-700">Admin</a>
+              <a href="/admin/speakers" class="hover:text-emerald-700 text-slate-700">Speakers</a>
+              <form action="/admin/toggle-view" method="post" class="inline">
+                <button
+                  class="text-xs px-2 py-1 rounded border border-emerald-600 text-emerald-700 hover:bg-emerald-50">
+                  View: <%= adminView ? "Admin" : "Speaker" %>
+                </button>
+              </form>
+            <% } %>
+          </nav>
+
+          <div class="hidden sm:flex items-center gap-3">
+            <div class="text-right text-xs">
+              <div class="font-semibold text-slate-700"><%= currentUser.name %></div>
+              <div class="text-slate-400">
+                <% if (currentUser.phone) { %>
+                  <%= currentUser.phone %>
+                <% } else { %>
+                  <%= currentUser.email %>
+                <% } %>
+              </div>
+            </div>
+            <form action="/logout" method="post">
+              <button
+                class="text-xs px-3 py-1 rounded-full bg-emerald-700 text-white hover:bg-emerald-800">
+                Logout
+              </button>
+            </form>
+          </div>
+        <% } else { %>
+          <div class="hidden sm:flex gap-2">
+            <a href="/login" class="text-sm text-emerald-700 hover:underline">Login</a>
+            <a href="/register"
+               class="text-sm px-3 py-1 rounded-full bg-emerald-700 text-white hover:bg-emerald-800">
+              Register
+            </a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div id="mobile-menu" class="sm:hidden hidden border-t border-emerald-100 bg-white">
+      <div class="max-w-5xl mx-auto px-4 py-3 space-y-3 text-sm">
+        <% if (currentUser) { %>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-semibold text-slate-800"><%= currentUser.name %></div>
+              <div class="text-slate-500 text-xs">
+                <% if (currentUser.phone) { %>
+                  <%= currentUser.phone %>
+                <% } else { %>
+                  <%= currentUser.email %>
+                <% } %>
+              </div>
+            </div>
+            <form action="/logout" method="post">
+              <button
+                class="text-xs px-3 py-1 rounded-full bg-emerald-700 text-white hover:bg-emerald-800">
+                Logout
+              </button>
+            </form>
+          </div>
+          <div class="flex flex-col gap-2">
+            <a href="/dashboard" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Dashboard</a>
+            <a href="/profile" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Profile</a>
+            <a href="/schedules" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Schedules</a>
+            <% if (currentUser.is_admin) { %>
+              <a href="/admin/schedules" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Admin</a>
+              <a href="/admin/speakers" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Speakers</a>
+              <form action="/admin/toggle-view" method="post">
+                <button
+                  class="w-full text-left px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">
+                  View: <%= adminView ? "Admin" : "Speaker" %>
+                </button>
+              </form>
+            <% } %>
+          </div>
+        <% } else { %>
+          <div class="flex flex-col gap-2">
+            <a href="/login" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Login</a>
+            <a href="/register"
+               class="px-3 py-2 rounded border border-emerald-100 text-white bg-emerald-700 hover:bg-emerald-800">
+              Register
+            </a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-6 w-full">
+    <% if (flash) { %>
+      <div
+        id="flash-message"
+        class="mb-4 px-4 py-3 rounded border text-sm
+          <%= flash.type === 'error'
+              ? 'bg-red-50 border-red-300 text-red-800'
+              : 'bg-emerald-50 border-emerald-300 text-emerald-800' %>">
+        <%= flash.message %>
+      </div>
+    <% } %>
+
+    <%- body %>
+  </main>
+
+  <footer class="border-t border-emerald-100 bg-white mt-6">
+    <div class="max-w-5xl mx-auto px-4 py-4 text-xs text-slate-500 flex justify-between items-center">
+      <span>Masjid al-Husna - Jumuah Speaker Management</span>
+      <span>Built for clarity, khidmah, and barakah.</span>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const flash = document.getElementById('flash-message');
+      if (flash) {
+        setTimeout(() => {
+          flash.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+          setTimeout(() => flash.remove(), 600);
+        }, 3000);
+      }
+
+      document.querySelectorAll('form[data-confirm]').forEach(form => {
+        form.addEventListener('submit', e => {
+          const msg = form.getAttribute('data-confirm') || 'Are you sure?';
+          if (!confirm(msg)) {
+            e.preventDefault();
+          }
+        });
+      });
+
+      const mobileToggle = document.getElementById('mobile-menu-toggle');
+      const mobileMenu = document.getElementById('mobile-menu');
+      if (mobileToggle && mobileMenu) {
+        mobileToggle.addEventListener('click', () => {
+          mobileMenu.classList.toggle('hidden');
+        });
+      }
+    });
+  </script>
+</body>
+</html>
