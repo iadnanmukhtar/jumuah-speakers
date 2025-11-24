@@ -240,8 +240,8 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
   const { name, phone, email, bio } = req.body;
   const normalizedPhone = normalizePhone(phone);
 
-  if (!name || !normalizedPhone) {
-    req.session.flash = { type: 'error', message: 'Name and a valid phone are required.' };
+  if (!name || !normalizedPhone || !(email && email.trim())) {
+    req.session.flash = { type: 'error', message: 'Name, email, and a valid phone are required.' };
     return res.redirect(`/admin/speakers/${id}/edit`);
   }
 

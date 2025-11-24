@@ -14,9 +14,10 @@ router.get('/register', (req, res) => {
 router.post('/register', (req, res) => {
   const { name, phone, email, bio } = req.body;
   const normalizedPhone = normalizePhone(phone);
+  const trimmedEmail = (email || '').trim();
 
-  if (!name || !normalizedPhone) {
-    req.session.flash = { type: 'error', message: 'Name and a valid phone are required.' };
+  if (!name || !normalizedPhone || !trimmedEmail) {
+    req.session.flash = { type: 'error', message: 'Name, email, and a valid phone are required.' };
     return res.redirect('/register');
   }
 
@@ -25,7 +26,7 @@ router.post('/register', (req, res) => {
     VALUES (?, ?, ?, ?, NULL, 0)
   `;
 
-  db.query(sql, [name, email || null, normalizedPhone, bio || ''], (err, result) => {
+  db.query(sql, [name, trimmedEmail, normalizedPhone, bio || ''], (err, result) => {
     if (err) {
       console.error(err);
       req.session.flash = {
@@ -38,10 +39,11 @@ router.post('/register', (req, res) => {
     req.session.user = {
       id: result.insertId,
       name,
-      email: email || null,
+      email: trimmedEmail,
       phone: normalizedPhone,
       bio: bio || '',
-      is_admin: 0
+      is_admin: 0,
+      is_super_admin: 0
     };
 
     req.session.flash = { type: 'success', message: 'Registration successful. Welcome.' };
@@ -100,8 +102,14 @@ router.post('/login/speaker', (req, res) => {
         email: user.email,
         phone: sessionPhone,
         bio: user.bio,
-        is_admin: !!user.is_admin
+        is_admin: !!user.is_admin,
+        is_super_admin: !!user.is_admin
       };
+
+      if (!user.email) {
+        req.session.flash = { type: 'error', message: 'Please add your email to continue.' };
+        return res.redirect('/profile');
+      }
 
       req.session.flash = { type: 'success', message: 'Logged in as speaker.' };
       return res.redirect('/dashboard');
@@ -142,7 +150,8 @@ router.post('/login/admin', (req, res) => {
         email: user.email,
         phone: user.phone,
         bio: user.bio,
-        is_admin: !!user.is_admin
+        is_admin: !!user.is_admin,
+        is_super_admin: !!user.is_admin
       };
 
       req.session.flash = { type: 'success', message: 'Admin login successful.' };
@@ -171,7 +180,11 @@ router.get('/profile', ensureAuthenticated, (req, res) => {
         return res.redirect('/dashboard');
       }
 
-      res.render('profile', { title: 'Masjid al-Husna | My Profile', user: results[0] });
+      res.render('profile', {
+        title: 'Masjid al-Husna | My Profile',
+        user: results[0],
+        requireEmail: !results[0].email
+      });
     }
   );
 });
@@ -180,9 +193,10 @@ router.post('/profile', ensureAuthenticated, (req, res) => {
   const userId = req.session.user.id;
   const { name, phone, email, bio } = req.body;
   const normalizedPhone = normalizePhone(phone);
+  const trimmedEmail = (email || '').trim();
 
-  if (!name || !normalizedPhone) {
-    req.session.flash = { type: 'error', message: 'Name and a valid phone are required.' };
+  if (!name || !normalizedPhone || !trimmedEmail) {
+    req.session.flash = { type: 'error', message: 'Name, email, and a valid phone are required.' };
     return res.redirect('/profile');
   }
 
@@ -192,7 +206,7 @@ router.post('/profile', ensureAuthenticated, (req, res) => {
     WHERE id = ?
   `;
 
-  db.query(sql, [name, email || null, normalizedPhone, bio || '', userId], err => {
+  db.query(sql, [name, trimmedEmail, normalizedPhone, bio || '', userId], err => {
     if (err) {
       console.error(err);
       if (err.code === 'ER_DUP_ENTRY') {
@@ -206,7 +220,7 @@ router.post('/profile', ensureAuthenticated, (req, res) => {
     req.session.user = {
       ...req.session.user,
       name,
-      email: email || null,
+      email: trimmedEmail,
       phone: normalizedPhone,
       bio: bio || ''
     };
