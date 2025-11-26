@@ -2,7 +2,7 @@
   <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-6">
     <h1 class="text-xl font-semibold text-emerald-800 mb-1">Edit Speaker</h1>
     <p class="text-sm text-slate-500">
-      Update the speaker's contact details. Phone numbers are stored without spaces/parentheses/dashes; +1 is assumed when no country code is provided.
+      Update the speaker's contact details. Phone numbers are stored without spaces/parentheses/dashes; +1 is assumed when no country code is provided. Email is optional if you only want to notify by SMS.
     </p>
   </div>
 
@@ -34,12 +34,11 @@
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1" for="email">Email</label>
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="email">Email (optional)</label>
           <input
             id="email"
             name="email"
             type="email"
-            required
             value="<%= speaker.email || '' %>"
             placeholder="you@example.com"
             class="w-full rounded border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />

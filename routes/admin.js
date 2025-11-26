@@ -213,6 +213,37 @@ router.get('/admin/speakers', ensureAuthenticated, ensureAdmin, (req, res) => {
   );
 });
 
+router.post('/admin/speakers', ensureAuthenticated, ensureAdmin, (req, res) => {
+  const { name, phone, email, bio } = req.body;
+  const normalizedPhone = normalizePhone(phone);
+  const trimmedEmail = (email || '').trim();
+
+  if (!name || !normalizedPhone) {
+    req.session.flash = { type: 'error', message: 'Name and a valid phone are required.' };
+    return res.redirect('/admin/speakers');
+  }
+
+  const sql = `
+    INSERT INTO users (name, email, phone, bio, password_hash, is_admin)
+    VALUES (?, ?, ?, ?, NULL, 0)
+  `;
+
+  db.query(sql, [name, trimmedEmail || null, normalizedPhone, bio || ''], err => {
+    if (err) {
+      console.error(err);
+      if (err.code === 'ER_DUP_ENTRY') {
+        req.session.flash = { type: 'error', message: 'That phone or email is already in use.' };
+      } else {
+        req.session.flash = { type: 'error', message: 'Could not add speaker.' };
+      }
+      return res.redirect('/admin/speakers');
+    }
+
+    req.session.flash = { type: 'success', message: 'Speaker added.' };
+    return res.redirect('/admin/speakers');
+  });
+});
+
 router.get('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, res) => {
   const id = req.params.id;
 
@@ -239,9 +270,10 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
   const id = req.params.id;
   const { name, phone, email, bio } = req.body;
   const normalizedPhone = normalizePhone(phone);
+  const trimmedEmail = (email || '').trim();
 
-  if (!name || !normalizedPhone || !(email && email.trim())) {
-    req.session.flash = { type: 'error', message: 'Name, email, and a valid phone are required.' };
+  if (!name || !normalizedPhone) {
+    req.session.flash = { type: 'error', message: 'Name and a valid phone are required.' };
     return res.redirect(`/admin/speakers/${id}/edit`);
   }
 
@@ -260,7 +292,7 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
         `UPDATE users
          SET name = ?, email = ?, phone = ?, bio = ?
          WHERE id = ? AND is_admin = 0`,
-        [name, email || null, normalizedPhone, bio || '', id],
+        [name, trimmedEmail || null, normalizedPhone, bio || '', id],
         async err2 => {
           if (err2) {
             console.error(err2);
@@ -277,10 +309,10 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
           const updatedUser = {
             id,
             name,
-            email: email || null,
+            email: trimmedEmail || null,
             phone: normalizedPhone
           };
-          const message = `Your profile was updated by an administrator. If you did not expect this change, please reply to confirm your details.\n\nName: ${name}\nPhone: ${normalizedPhone}\nEmail: ${email || 'N/A'}`;
+          const message = `Your profile was updated by an administrator. If you did not expect this change, please reply to confirm your details.\n\nName: ${name}\nPhone: ${normalizedPhone}\nEmail: ${trimmedEmail || 'N/A'}`;
           await notifySpeaker(updatedUser, message, 'Profile updated');
 
           return res.redirect('/admin/speakers');
