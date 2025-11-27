@@ -14,6 +14,7 @@ const { startReminderWorker } = require('./reminderWorker');
 const authRoutes = require('./routes/auth');
 const dashboardRoutes = require('./routes/dashboard');
 const adminRoutes = require('./routes/admin');
+const publicRoutes = require('./routes/public');
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use(flashMiddleware);
 app.use(authRoutes);
 app.use(dashboardRoutes);
 app.use(adminRoutes);
+app.use(publicRoutes);
 
 app.get('/', (req, res) => {
   if (req.session.user) {

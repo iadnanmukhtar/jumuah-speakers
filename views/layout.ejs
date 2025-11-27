@@ -54,6 +54,7 @@
             <a href="/dashboard" class="hover:text-emerald-700 text-slate-700">Dashboard</a>
             <a href="/profile" class="hover:text-emerald-700 text-slate-700">Profile</a>
             <a href="/schedules" class="hover:text-emerald-700 text-slate-700">Schedules</a>
+            <a href="/public/schedule" class="hover:text-emerald-700 text-slate-700">Public schedule</a>
 
             <% if (currentUser.is_admin) { %>
               <a href="/admin/schedules" class="hover:text-emerald-700 text-slate-700">Admin</a>
@@ -87,6 +88,7 @@
           </div>
         <% } else { %>
           <div class="hidden sm:flex gap-2">
+            <a href="/public/schedule" class="text-sm text-emerald-700 hover:underline">Public schedule</a>
             <a href="/login" class="text-sm text-emerald-700 hover:underline">Login</a>
             <a href="/register"
                class="text-sm px-3 py-1 rounded-full bg-emerald-700 text-white hover:bg-emerald-800">
@@ -122,6 +124,7 @@
             <a href="/dashboard" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Dashboard</a>
             <a href="/profile" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Profile</a>
             <a href="/schedules" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Schedules</a>
+            <a href="/public/schedule" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Public schedule</a>
             <% if (currentUser.is_admin) { %>
               <a href="/admin/schedules" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Admin</a>
               <a href="/admin/speakers" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Speakers</a>
@@ -135,6 +138,7 @@
           </div>
         <% } else { %>
           <div class="flex flex-col gap-2">
+            <a href="/public/schedule" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Public schedule</a>
             <a href="/login" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Login</a>
             <a href="/register"
                class="px-3 py-2 rounded border border-emerald-100 text-white bg-emerald-700 hover:bg-emerald-800">
