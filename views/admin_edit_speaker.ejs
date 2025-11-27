@@ -1,3 +1,10 @@
+<%
+  const initials = name => {
+    if (!name) return '?';
+    const trimmed = name.trim();
+    return trimmed ? trimmed[0].toUpperCase() : '?';
+  };
+%>
 <section class="max-w-3xl mx-auto space-y-6">
   <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-6">
     <h1 class="text-xl font-semibold text-emerald-800 mb-1">Edit Speaker</h1>
@@ -8,6 +15,48 @@
 
   <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-6">
     <form action="/admin/speakers/<%= speaker.id %>/edit" method="post" class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-4 items-center">
+        <div class="flex items-center gap-3">
+          <div class="h-24 w-24 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-semibold relative">
+            <img
+              id="admin-edit-avatar-preview"
+              src="<%= speaker.avatar_url || '' %>"
+              alt="<%= speaker.name %>"
+              class="h-full w-full object-cover <%= speaker.avatar_url ? '' : 'hidden' %>"
+              style="transform: scale(1); transform-origin: center;" />
+            <div id="admin-edit-avatar-placeholder" class="<%= speaker.avatar_url ? 'hidden' : '' %> text-lg">
+              <%= initials(speaker.name) %>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="block text-sm font-medium text-slate-700" for="admin-edit-avatar-input">
+              Profile photo (optional)
+            </label>
+            <span id="admin-edit-avatar-hint" class="text-xs text-slate-500">Upload and adjust crop.</span>
+          </div>
+          <input
+            id="admin-edit-avatar-input"
+            type="file"
+            accept="image/*"
+            class="text-sm text-slate-700" />
+          <div class="flex items-center gap-2">
+            <label for="admin-edit-avatar-zoom" class="text-xs text-slate-500 w-16">Zoom</label>
+            <input
+              id="admin-edit-avatar-zoom"
+              type="range"
+              min="1"
+              max="2.5"
+              step="0.05"
+              value="1"
+              class="w-full accent-emerald-700" />
+          </div>
+          <input type="hidden" name="avatar_data" id="admin-edit-avatar-data" />
+          <p class="text-xs text-slate-500">Cropped to a round thumbnail.</p>
+        </div>
+      </div>
+
       <div>
         <label class="block text-sm font-medium text-slate-700 mb-1" for="name">Name</label>
         <input
@@ -66,3 +115,76 @@
     </form>
   </div>
 </section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const fileInput = document.getElementById('admin-edit-avatar-input');
+    const zoomInput = document.getElementById('admin-edit-avatar-zoom');
+    const previewImg = document.getElementById('admin-edit-avatar-preview');
+    const placeholder = document.getElementById('admin-edit-avatar-placeholder');
+    const hiddenField = document.getElementById('admin-edit-avatar-data');
+    const hint = document.getElementById('admin-edit-avatar-hint');
+
+    let loadedImage = null;
+
+    const updatePreview = () => {
+      if (!loadedImage) return;
+      const scale = parseFloat(zoomInput.value || '1');
+      previewImg.style.transform = `scale(${scale})`;
+
+      const canvas = document.createElement('canvas');
+      const size = 400;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+
+      const coverScale = Math.max(size / loadedImage.width, size / loadedImage.height);
+      const totalScale = coverScale * scale;
+      const drawW = loadedImage.width * totalScale;
+      const drawH = loadedImage.height * totalScale;
+      const dx = (size - drawW) / 2;
+      const dy = (size - drawH) / 2;
+
+      ctx.drawImage(loadedImage, dx, dy, drawW, drawH);
+      hiddenField.value = canvas.toDataURL('image/png');
+    };
+
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (!file.type || !file.type.startsWith('image/')) {
+        hint.textContent = 'Please choose an image file.';
+        fileInput.value = '';
+        hiddenField.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          loadedImage = img;
+          previewImg.src = img.src;
+          previewImg.classList.remove('hidden');
+          placeholder.classList.add('hidden');
+          zoomInput.value = '1';
+          previewImg.style.transform = 'scale(1)';
+          hint.textContent = 'Use the slider to adjust the crop.';
+          updatePreview();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    zoomInput.addEventListener('input', () => {
+      if (!loadedImage) return;
+      updatePreview();
+    });
+  });
+</script>

@@ -330,7 +330,7 @@ router.get('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, r
 
 router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, res) => {
   const id = req.params.id;
-  const { name, phone, email, bio } = req.body;
+  const { name, phone, email, bio, avatar_data } = req.body;
   const normalizedPhone = normalizePhone(phone);
   const trimmedEmail = (email || '').trim();
 
@@ -350,11 +350,57 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
         return res.redirect('/admin/speakers');
       }
 
+      let avatarUrl = existing.avatar_url || null;
+      const uploadData = (avatar_data || '').trim();
+      if (uploadData) {
+        const match = uploadData.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
+        if (!match) {
+          req.session.flash = { type: 'error', message: 'Profile photo must be a PNG or JPG.' };
+          return res.redirect(`/admin/speakers/${id}/edit`);
+        }
+
+        const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
+        let buffer;
+        try {
+          buffer = Buffer.from(match[2], 'base64');
+        } catch (e) {
+          console.error('Error decoding avatar data', e);
+          req.session.flash = { type: 'error', message: 'Could not process profile photo.' };
+          return res.redirect(`/admin/speakers/${id}/edit`);
+        }
+
+        const maxBytes = 1.5 * 1024 * 1024;
+        if (!buffer || buffer.length === 0 || buffer.length > maxBytes) {
+          req.session.flash = { type: 'error', message: 'Profile photo is too large. Please use a smaller image.' };
+          return res.redirect(`/admin/speakers/${id}/edit`);
+        }
+
+        try {
+          const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+          if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+          const fileName = `avatar-${id}-${Date.now()}.${ext}`;
+          const filePath = path.join(uploadDir, fileName);
+          fs.writeFileSync(filePath, buffer);
+
+          if (avatarUrl && avatarUrl.startsWith('/uploads/')) {
+            const oldPath = path.join(uploadDir, path.basename(avatarUrl));
+            fs.unlink(oldPath, () => {});
+          }
+
+          avatarUrl = `/uploads/${fileName}`;
+        } catch (e) {
+          console.error('Error saving avatar', e);
+          req.session.flash = { type: 'error', message: 'Could not save profile photo.' };
+          return res.redirect(`/admin/speakers/${id}/edit`);
+        }
+      }
+
       db.query(
         `UPDATE users
-         SET name = ?, email = ?, phone = ?, bio = ?
+         SET name = ?, email = ?, phone = ?, bio = ?, avatar_url = ?
          WHERE id = ? AND is_admin = 0`,
-        [name, trimmedEmail || null, normalizedPhone, bio || '', id],
+        [name, trimmedEmail || null, normalizedPhone, bio || '', avatarUrl, id],
         async err2 => {
           if (err2) {
             console.error(err2);
