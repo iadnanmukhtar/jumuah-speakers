@@ -340,7 +340,7 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
   }
 
   db.query(
-    `SELECT id, name, email, phone FROM users WHERE id = ? AND is_admin = 0 LIMIT 1`,
+    `SELECT id, name, email, phone, avatar_url FROM users WHERE id = ? AND is_admin = 0 LIMIT 1`,
     [id],
     (err, results) => {
       const existing = results && results[0];
