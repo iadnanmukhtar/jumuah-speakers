@@ -352,6 +352,8 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
 
       let avatarUrl = existing.avatar_url || null;
       const uploadData = (avatar_data || '').trim();
+      let updateAvatarField = false;
+
       if (uploadData) {
         const match = uploadData.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
         if (!match) {
@@ -389,6 +391,7 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
           }
 
           avatarUrl = `/uploads/${fileName}`;
+          updateAvatarField = true;
         } catch (e) {
           console.error('Error saving avatar', e);
           req.session.flash = { type: 'error', message: 'Could not save profile photo.' };
@@ -396,36 +399,42 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
         }
       }
 
-      db.query(
-        `UPDATE users
-         SET name = ?, email = ?, phone = ?, bio = ?, avatar_url = ?
-         WHERE id = ? AND is_admin = 0`,
-        [name, trimmedEmail || null, normalizedPhone, bio || '', avatarUrl, id],
-        async err2 => {
-          if (err2) {
-            console.error(err2);
-            if (err2.code === 'ER_DUP_ENTRY') {
-              req.session.flash = { type: 'error', message: 'That phone or email is already in use.' };
-            } else {
-              req.session.flash = { type: 'error', message: 'Could not update speaker.' };
-            }
-            return res.redirect(`/admin/speakers/${id}/edit`);
+      const sql = updateAvatarField
+        ? `UPDATE users
+           SET name = ?, email = ?, phone = ?, bio = ?, avatar_url = ?
+           WHERE id = ? AND is_admin = 0`
+        : `UPDATE users
+           SET name = ?, email = ?, phone = ?, bio = ?
+           WHERE id = ? AND is_admin = 0`;
+
+      const params = updateAvatarField
+        ? [name, trimmedEmail || null, normalizedPhone, bio || '', avatarUrl, id]
+        : [name, trimmedEmail || null, normalizedPhone, bio || '', id];
+
+      db.query(sql, params, async err2 => {
+        if (err2) {
+          console.error(err2);
+          if (err2.code === 'ER_DUP_ENTRY') {
+            req.session.flash = { type: 'error', message: 'That phone or email is already in use.' };
+          } else {
+            req.session.flash = { type: 'error', message: 'Could not update speaker.' };
           }
-
-          req.session.flash = { type: 'success', message: 'Speaker updated.' };
-
-          const updatedUser = {
-            id,
-            name,
-            email: trimmedEmail || null,
-            phone: normalizedPhone
-          };
-          const message = `Your profile was updated by an administrator. If you did not expect this change, please reply to confirm your details.\n\nName: ${name}\nPhone: ${normalizedPhone}\nEmail: ${trimmedEmail || 'N/A'}`;
-          await notifySpeaker(updatedUser, message, 'Profile updated');
-
-          return res.redirect('/admin/speakers');
+          return res.redirect(`/admin/speakers/${id}/edit`);
         }
-      );
+
+        req.session.flash = { type: 'success', message: 'Speaker updated.' };
+
+        const updatedUser = {
+          id,
+          name,
+          email: trimmedEmail || null,
+          phone: normalizedPhone
+        };
+        const message = `Your profile was updated by an administrator. If you did not expect this change, please reply to confirm your details.\n\nName: ${name}\nPhone: ${normalizedPhone}\nEmail: ${trimmedEmail || 'N/A'}`;
+        await notifySpeaker(updatedUser, message, 'Profile updated');
+
+        return res.redirect('/admin/speakers');
+      });
     }
   );
 });
