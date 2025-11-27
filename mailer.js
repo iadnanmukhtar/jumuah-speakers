@@ -17,6 +17,19 @@ if (process.env.SMTP_HOST) {
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@mashid.com';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'no-reply@masjid.com';
+const APP_NAME = 'Masjid al-Husna | Jumuah Speaker Scheduling';
+const APP_URL = 'https://www.masjidalhusna.com/services/jumuah';
+
+function appendFooter(text) {
+  const body = (text || '').trimEnd();
+  const footer = `— ${APP_NAME}\n${APP_URL}`;
+
+  if (body.includes(APP_URL) || body.includes(APP_NAME)) {
+    return body;
+  }
+
+  return `${body}${body ? '\n\n' : ''}${footer}`;
+}
 
 async function sendEmail(to, subject, text) {
   if (!to) {
@@ -24,9 +37,11 @@ async function sendEmail(to, subject, text) {
     return;
   }
 
+  const finalText = appendFooter(text);
+
   if (!transporter) {
     console.log('[Mailer] SMTP not configured - email log only');
-    console.log({ to, subject, text });
+    console.log({ to, subject, text: finalText });
     return;
   }
 
@@ -34,7 +49,7 @@ async function sendEmail(to, subject, text) {
     from: FROM_EMAIL,
     to,
     subject,
-    text
+    text: finalText
   });
 }
 
