@@ -240,82 +240,91 @@ router.post('/profile', ensureAuthenticated, (req, res) => {
     return res.redirect('/profile');
   }
 
-  let avatarUrl = req.session.user.avatar_url || null;
-  const uploadData = (avatar_data || '').trim();
-
-  if (uploadData) {
-    const match = uploadData.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
-    if (!match) {
-      req.session.flash = { type: 'error', message: 'Profile photo must be a PNG or JPG.' };
-      return res.redirect('/profile');
-    }
-
-    const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
-    const base64Data = match[2];
-    let buffer;
-    try {
-      buffer = Buffer.from(base64Data, 'base64');
-    } catch (e) {
-      console.error('Error decoding avatar data', e);
-      req.session.flash = { type: 'error', message: 'Could not process profile photo.' };
-      return res.redirect('/profile');
-    }
-
-    const maxBytes = 1.5 * 1024 * 1024; // ~1.5MB
-    if (!buffer || buffer.length === 0 || buffer.length > maxBytes) {
-      req.session.flash = { type: 'error', message: 'Profile photo is too large. Please use a smaller image.' };
-      return res.redirect('/profile');
-    }
-
-    const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-    try {
-      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-      const fileName = `avatar-${userId}-${Date.now()}.${ext}`;
-      const filePath = path.join(uploadDir, fileName);
-      fs.writeFileSync(filePath, buffer);
-
-      // Clean up previous avatar if it lives in /uploads
-      if (avatarUrl && avatarUrl.startsWith('/uploads/')) {
-        const oldPath = path.join(uploadDir, path.basename(avatarUrl));
-        fs.unlink(oldPath, () => {});
-      }
-
-      avatarUrl = `/uploads/${fileName}`;
-    } catch (e) {
-      console.error('Error saving avatar', e);
-      req.session.flash = { type: 'error', message: 'Could not save profile photo.' };
-      return res.redirect('/profile');
-    }
-  }
-
-  const sql = `
-    UPDATE users
-    SET name = ?, email = ?, phone = ?, bio = ?, avatar_url = ?
-    WHERE id = ?
-  `;
-
-  db.query(sql, [name, trimmedEmail, normalizedPhone, bio || '', avatarUrl, userId], err => {
-    if (err) {
+  db.query(`SELECT avatar_url FROM users WHERE id = ? LIMIT 1`, [userId], (err, results) => {
+    const existingAvatar = results && results[0] ? results[0].avatar_url : null;
+    if (err || !results || results.length === 0) {
       console.error(err);
-      if (err.code === 'ER_DUP_ENTRY') {
-        req.session.flash = { type: 'error', message: 'That phone or email is already in use.' };
-      } else {
-        req.session.flash = { type: 'error', message: 'Could not update profile.' };
-      }
+      req.session.flash = { type: 'error', message: 'Could not update profile.' };
       return res.redirect('/profile');
     }
 
-    req.session.user = {
-      ...req.session.user,
-      name,
-      email: trimmedEmail,
-      phone: normalizedPhone,
-      bio: bio || '',
-      avatar_url: avatarUrl
-    };
+    let avatarUrl = existingAvatar || req.session.user.avatar_url || null;
+    const uploadData = (avatar_data || '').trim();
 
-    req.session.flash = { type: 'success', message: 'Profile updated.' };
-    return res.redirect('/profile');
+    if (uploadData) {
+      const match = uploadData.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
+      if (!match) {
+        req.session.flash = { type: 'error', message: 'Profile photo must be a PNG or JPG.' };
+        return res.redirect('/profile');
+      }
+
+      const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
+      const base64Data = match[2];
+      let buffer;
+      try {
+        buffer = Buffer.from(base64Data, 'base64');
+      } catch (e) {
+        console.error('Error decoding avatar data', e);
+        req.session.flash = { type: 'error', message: 'Could not process profile photo.' };
+        return res.redirect('/profile');
+      }
+
+      const maxBytes = 1.5 * 1024 * 1024; // ~1.5MB
+      if (!buffer || buffer.length === 0 || buffer.length > maxBytes) {
+        req.session.flash = { type: 'error', message: 'Profile photo is too large. Please use a smaller image.' };
+        return res.redirect('/profile');
+      }
+
+      const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+      try {
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        const fileName = `avatar-${userId}-${Date.now()}.${ext}`;
+        const filePath = path.join(uploadDir, fileName);
+        fs.writeFileSync(filePath, buffer);
+
+        // Clean up previous avatar if it lives in /uploads
+        if (avatarUrl && avatarUrl.startsWith('/uploads/')) {
+          const oldPath = path.join(uploadDir, path.basename(avatarUrl));
+          fs.unlink(oldPath, () => {});
+        }
+
+        avatarUrl = `/uploads/${fileName}`;
+      } catch (e) {
+        console.error('Error saving avatar', e);
+        req.session.flash = { type: 'error', message: 'Could not save profile photo.' };
+        return res.redirect('/profile');
+      }
+    }
+
+    const sql = `
+      UPDATE users
+      SET name = ?, email = ?, phone = ?, bio = ?, avatar_url = ?
+      WHERE id = ?
+    `;
+
+    db.query(sql, [name, trimmedEmail, normalizedPhone, bio || '', avatarUrl, userId], err2 => {
+      if (err2) {
+        console.error(err2);
+        if (err2.code === 'ER_DUP_ENTRY') {
+          req.session.flash = { type: 'error', message: 'That phone or email is already in use.' };
+        } else {
+          req.session.flash = { type: 'error', message: 'Could not update profile.' };
+        }
+        return res.redirect('/profile');
+      }
+
+      req.session.user = {
+        ...req.session.user,
+        name,
+        email: trimmedEmail,
+        phone: normalizedPhone,
+        bio: bio || '',
+        avatar_url: avatarUrl
+      };
+
+      req.session.flash = { type: 'success', message: 'Profile updated.' };
+      return res.redirect('/profile');
+    });
   });
 });
 
