@@ -13,7 +13,7 @@ router.get('/dashboard', ensureAuthenticated, (req, res) => {
     if (err) console.error(err);
 
     const sql = `
-      SELECT s.*, u.name AS speaker_name
+      SELECT s.*, u.name AS speaker_name, u.avatar_url AS speaker_avatar
       FROM schedules s
       LEFT JOIN users u ON s.speaker_id = u.id
       WHERE s.speaker_id = ?
@@ -43,7 +43,7 @@ router.get('/schedules', ensureAuthenticated, (req, res) => {
     }
 
     const sql = `
-      SELECT s.*, u.name AS speaker_name
+      SELECT s.*, u.name AS speaker_name, u.avatar_url AS speaker_avatar
       FROM schedules s
       LEFT JOIN users u ON s.speaker_id = u.id
       ORDER BY s.date ASC, s.time ASC

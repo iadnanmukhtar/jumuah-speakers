@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const db = require('../db');
 const { ensureAuthenticated, ensureAdmin } = require('../middleware/auth');
 const { ensureUpcomingJumuahs } = require('./helpers');
@@ -20,14 +22,14 @@ router.get('/admin/schedules', ensureAuthenticated, ensureAdmin, (req, res) => {
     }
 
     const schedulesSql = `
-      SELECT s.*, u.name AS speaker_name, u.phone AS speaker_phone
+      SELECT s.*, u.name AS speaker_name, u.phone AS speaker_phone, u.avatar_url AS speaker_avatar
       FROM schedules s
       LEFT JOIN users u ON s.speaker_id = u.id
       ORDER BY s.date ASC, s.time ASC
     `;
 
     const speakersSql = `
-      SELECT id, name, phone
+      SELECT id, name, phone, avatar_url
       FROM users
       WHERE is_admin = 0
       ORDER BY name ASC
@@ -87,7 +89,7 @@ router.get('/admin/schedules/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
 
   db.query(
     `
-    SELECT s.*, u.name AS speaker_name, u.phone AS speaker_phone
+    SELECT s.*, u.name AS speaker_name, u.phone AS speaker_phone, u.avatar_url AS speaker_avatar
     FROM schedules s
     LEFT JOIN users u ON s.speaker_id = u.id
     WHERE s.id = ?
@@ -103,7 +105,7 @@ router.get('/admin/schedules/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
       }
 
       db.query(
-        `SELECT id, name, phone FROM users WHERE is_admin = 0 ORDER BY name ASC`,
+        `SELECT id, name, phone, avatar_url FROM users WHERE is_admin = 0 ORDER BY name ASC`,
         [],
         (err2, speakers) => {
           if (err2) {
@@ -193,7 +195,7 @@ router.post('/admin/schedules/:id/assign', ensureAuthenticated, ensureAdmin, (re
 
 router.get('/admin/speakers', ensureAuthenticated, ensureAdmin, (req, res) => {
   db.query(
-    `SELECT id, name, email, phone, bio
+    `SELECT id, name, email, phone, bio, avatar_url
      FROM users
      WHERE is_admin = 0
      ORDER BY name ASC`,
@@ -214,7 +216,7 @@ router.get('/admin/speakers', ensureAuthenticated, ensureAdmin, (req, res) => {
 });
 
 router.post('/admin/speakers', ensureAuthenticated, ensureAdmin, (req, res) => {
-  const { name, phone, email, bio } = req.body;
+  const { name, phone, email, bio, avatar_data } = req.body;
   const normalizedPhone = normalizePhone(phone);
   const trimmedEmail = (email || '').trim();
 
@@ -223,12 +225,39 @@ router.post('/admin/speakers', ensureAuthenticated, ensureAdmin, (req, res) => {
     return res.redirect('/admin/speakers');
   }
 
+  const uploadData = (avatar_data || '').trim();
+  let avatarBuffer = null;
+  let avatarExt = null;
+
+  if (uploadData) {
+    const match = uploadData.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
+    if (!match) {
+      req.session.flash = { type: 'error', message: 'Profile photo must be a PNG or JPG.' };
+      return res.redirect('/admin/speakers');
+    }
+
+    avatarExt = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
+    try {
+      avatarBuffer = Buffer.from(match[2], 'base64');
+    } catch (e) {
+      console.error('Error decoding avatar data', e);
+      req.session.flash = { type: 'error', message: 'Could not process profile photo.' };
+      return res.redirect('/admin/speakers');
+    }
+
+    const maxBytes = 1.5 * 1024 * 1024;
+    if (!avatarBuffer || avatarBuffer.length === 0 || avatarBuffer.length > maxBytes) {
+      req.session.flash = { type: 'error', message: 'Profile photo is too large. Please use a smaller image.' };
+      return res.redirect('/admin/speakers');
+    }
+  }
+
   const sql = `
     INSERT INTO users (name, email, phone, bio, password_hash, is_admin)
     VALUES (?, ?, ?, ?, NULL, 0)
   `;
 
-  db.query(sql, [name, trimmedEmail || null, normalizedPhone, bio || ''], err => {
+  db.query(sql, [name, trimmedEmail || null, normalizedPhone, bio || ''], (err, result) => {
     if (err) {
       console.error(err);
       if (err.code === 'ER_DUP_ENTRY') {
@@ -239,8 +268,41 @@ router.post('/admin/speakers', ensureAuthenticated, ensureAdmin, (req, res) => {
       return res.redirect('/admin/speakers');
     }
 
-    req.session.flash = { type: 'success', message: 'Speaker added.' };
-    return res.redirect('/admin/speakers');
+    const newId = result.insertId;
+
+    const finalize = () => {
+      req.session.flash = { type: 'success', message: 'Speaker added.' };
+      return res.redirect('/admin/speakers');
+    };
+
+    if (!avatarBuffer) return finalize();
+
+    try {
+      const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+      const fileName = `avatar-${newId}-${Date.now()}.${avatarExt}`;
+      const filePath = path.join(uploadDir, fileName);
+      fs.writeFileSync(filePath, avatarBuffer);
+
+      const avatarUrl = `/uploads/${fileName}`;
+      db.query(
+        `UPDATE users SET avatar_url = ? WHERE id = ?`,
+        [avatarUrl, newId],
+        err2 => {
+          if (err2) {
+            console.error('Error saving avatar URL', err2);
+            req.session.flash = { type: 'error', message: 'Speaker added, but photo could not be saved.' };
+            return res.redirect('/admin/speakers');
+          }
+          return finalize();
+        }
+      );
+    } catch (e) {
+      console.error('Error saving avatar', e);
+      req.session.flash = { type: 'error', message: 'Speaker added, but photo could not be saved.' };
+      return res.redirect('/admin/speakers');
+    }
   });
 });
 
@@ -248,7 +310,7 @@ router.get('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, r
   const id = req.params.id;
 
   db.query(
-    `SELECT id, name, email, phone, bio FROM users WHERE id = ? AND is_admin = 0 LIMIT 1`,
+    `SELECT id, name, email, phone, bio, avatar_url FROM users WHERE id = ? AND is_admin = 0 LIMIT 1`,
     [id],
     (err, results) => {
       const speaker = results && results[0];
@@ -325,7 +387,7 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
 router.post('/admin/speakers/:id/delete', ensureAuthenticated, ensureAdmin, (req, res) => {
   const id = req.params.id;
 
-  db.query(`SELECT id, name, email, phone, is_admin FROM users WHERE id = ? LIMIT 1`, [id], (err, results) => {
+  db.query(`SELECT id, name, email, phone, is_admin, avatar_url FROM users WHERE id = ? LIMIT 1`, [id], (err, results) => {
     const speaker = results && results[0];
     if (err || !speaker || speaker.is_admin) {
       console.error(err);
@@ -351,6 +413,12 @@ router.post('/admin/speakers/:id/delete', ensureAuthenticated, ensureAdmin, (req
           console.error(err3);
           req.session.flash = { type: 'error', message: 'Could not delete speaker.' };
           return res.redirect('/admin/speakers');
+        }
+
+        if (speaker.avatar_url && speaker.avatar_url.startsWith('/uploads/')) {
+          const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+          const target = path.join(uploadDir, path.basename(speaker.avatar_url));
+          fs.unlink(target, () => {});
         }
 
         const notifyUser = {

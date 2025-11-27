@@ -1,6 +1,9 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const db = require('../db');
 const { ensureAuthenticated } = require('../middleware/auth');
+const { ensureUpcomingJumuahs } = require('./helpers');
 const { normalizePhone } = require('../utils/phone');
 
 const router = express.Router();
@@ -42,6 +45,7 @@ router.post('/register', (req, res) => {
       email: trimmedEmail,
       phone: normalizedPhone,
       bio: bio || '',
+      avatar_url: null,
       is_admin: 0,
       is_super_admin: 0
     };
@@ -54,7 +58,41 @@ router.post('/register', (req, res) => {
 // Login
 router.get('/login', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
-  res.render('login', { title: 'Masjid al-Husna Jumuah Speaker Scheduler' });
+
+  ensureUpcomingJumuahs(err => {
+    if (err) console.error(err);
+
+    const today = new Date();
+    const end = new Date(today);
+    end.setDate(end.getDate() + 21);
+
+    const todayStr = today.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    const sql = `
+      SELECT s.*, u.name AS speaker_name
+      , u.avatar_url AS speaker_avatar
+      FROM schedules s
+      LEFT JOIN users u ON s.speaker_id = u.id
+      WHERE s.date >= ? AND s.date <= ?
+      ORDER BY s.date ASC, s.time ASC
+      LIMIT 8
+    `;
+
+    db.query(sql, [todayStr, endStr], (err2, results) => {
+      if (err2) {
+        console.error(err2);
+        return res.render('login', {
+          title: 'Masjid al-Husna Jumuah Speaker Scheduler',
+          publicSchedules: []
+        });
+      }
+
+      res.render('login', {
+        title: 'Masjid al-Husna Jumuah Speaker Scheduler',
+        publicSchedules: results || []
+      });
+    });
+  });
 });
 
 // Speaker login via phone
@@ -102,6 +140,7 @@ router.post('/login/speaker', (req, res) => {
         email: user.email,
         phone: sessionPhone,
         bio: user.bio,
+        avatar_url: user.avatar_url || null,
         is_admin: !!user.is_admin,
         is_super_admin: !!user.is_admin
       };
@@ -150,6 +189,7 @@ router.post('/login/admin', (req, res) => {
         email: user.email,
         phone: user.phone,
         bio: user.bio,
+        avatar_url: user.avatar_url || null,
         is_admin: !!user.is_admin,
         is_super_admin: !!user.is_admin
       };
@@ -171,7 +211,7 @@ router.get('/profile', ensureAuthenticated, (req, res) => {
   const userId = req.session.user.id;
 
   db.query(
-    `SELECT id, name, email, phone, bio FROM users WHERE id = ? LIMIT 1`,
+    `SELECT id, name, email, phone, bio, avatar_url FROM users WHERE id = ? LIMIT 1`,
     [userId],
     (err, results) => {
       if (err || !results || results.length === 0) {
@@ -191,7 +231,7 @@ router.get('/profile', ensureAuthenticated, (req, res) => {
 
 router.post('/profile', ensureAuthenticated, (req, res) => {
   const userId = req.session.user.id;
-  const { name, phone, email, bio } = req.body;
+  const { name, phone, email, bio, avatar_data } = req.body;
   const normalizedPhone = normalizePhone(phone);
   const trimmedEmail = (email || '').trim();
 
@@ -200,13 +240,61 @@ router.post('/profile', ensureAuthenticated, (req, res) => {
     return res.redirect('/profile');
   }
 
+  let avatarUrl = req.session.user.avatar_url || null;
+  const uploadData = (avatar_data || '').trim();
+
+  if (uploadData) {
+    const match = uploadData.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
+    if (!match) {
+      req.session.flash = { type: 'error', message: 'Profile photo must be a PNG or JPG.' };
+      return res.redirect('/profile');
+    }
+
+    const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
+    const base64Data = match[2];
+    let buffer;
+    try {
+      buffer = Buffer.from(base64Data, 'base64');
+    } catch (e) {
+      console.error('Error decoding avatar data', e);
+      req.session.flash = { type: 'error', message: 'Could not process profile photo.' };
+      return res.redirect('/profile');
+    }
+
+    const maxBytes = 1.5 * 1024 * 1024; // ~1.5MB
+    if (!buffer || buffer.length === 0 || buffer.length > maxBytes) {
+      req.session.flash = { type: 'error', message: 'Profile photo is too large. Please use a smaller image.' };
+      return res.redirect('/profile');
+    }
+
+    const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+    try {
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      const fileName = `avatar-${userId}-${Date.now()}.${ext}`;
+      const filePath = path.join(uploadDir, fileName);
+      fs.writeFileSync(filePath, buffer);
+
+      // Clean up previous avatar if it lives in /uploads
+      if (avatarUrl && avatarUrl.startsWith('/uploads/')) {
+        const oldPath = path.join(uploadDir, path.basename(avatarUrl));
+        fs.unlink(oldPath, () => {});
+      }
+
+      avatarUrl = `/uploads/${fileName}`;
+    } catch (e) {
+      console.error('Error saving avatar', e);
+      req.session.flash = { type: 'error', message: 'Could not save profile photo.' };
+      return res.redirect('/profile');
+    }
+  }
+
   const sql = `
     UPDATE users
-    SET name = ?, email = ?, phone = ?, bio = ?
+    SET name = ?, email = ?, phone = ?, bio = ?, avatar_url = ?
     WHERE id = ?
   `;
 
-  db.query(sql, [name, trimmedEmail, normalizedPhone, bio || '', userId], err => {
+  db.query(sql, [name, trimmedEmail, normalizedPhone, bio || '', avatarUrl, userId], err => {
     if (err) {
       console.error(err);
       if (err.code === 'ER_DUP_ENTRY') {
@@ -222,7 +310,8 @@ router.post('/profile', ensureAuthenticated, (req, res) => {
       name,
       email: trimmedEmail,
       phone: normalizedPhone,
-      bio: bio || ''
+      bio: bio || '',
+      avatar_url: avatarUrl
     };
 
     req.session.flash = { type: 'success', message: 'Profile updated.' };

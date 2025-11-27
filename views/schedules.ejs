@@ -14,6 +14,12 @@
     date.setHours(h, m, 0, 0);
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
+
+  const initials = name => {
+    if (!name) return '?';
+    const trimmed = name.trim();
+    return trimmed ? trimmed[0].toUpperCase() : '?';
+  };
 %>
 <section class="space-y-6">
   <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-5">
@@ -50,8 +56,15 @@
                   <%= formatDate(s.date) %>
                 </div>
                 <div class="text-sm text-slate-500"><%= formatTime(s.time) %></div>
-                <div class="text-xs text-slate-500 mt-1">
-                  <%= s.speaker_name || 'Unassigned' %>
+                <div class="flex items-center gap-2 text-xs text-slate-500 mt-2">
+                  <div class="h-8 w-8 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-semibold">
+                    <% if (s.speaker_avatar) { %>
+                      <img src="<%= s.speaker_avatar %>" alt="<%= s.speaker_name || 'Unassigned' %>" class="h-full w-full object-cover" />
+                    <% } else { %>
+                      <span><%= initials(s.speaker_name || 'Open') %></span>
+                    <% } %>
+                  </div>
+                  <span><%= s.speaker_name || 'Unassigned' %></span>
                 </div>
               </div>
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs
@@ -113,7 +126,7 @@
                 <th class="py-2 px-3 text-left">Date</th>
                 <th class="py-2 px-3 text-left">Time</th>
                 <th class="py-2 px-3 text-left">Topic</th>
-                <!-- <th class="py-2 px-3 text-left">Speaker</th> -->
+                <th class="py-2 px-3 text-left">Speaker</th>
               <th class="py-2 px-3 text-left">Status</th>
               <th class="py-2 px-3 text-right">Action</th>
             </tr>
@@ -145,7 +158,18 @@
                     <%= s.topic || 'TBD' %>
                   <% } %>
                 </td>
-                <td class="py-2 px-3"><%= s.speaker_name || 'Unassigned' %></td>
+                <td class="py-2 px-3">
+                  <div class="flex items-center gap-2">
+                    <div class="h-8 w-8 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-semibold">
+                      <% if (s.speaker_avatar) { %>
+                        <img src="<%= s.speaker_avatar %>" alt="<%= s.speaker_name || 'Unassigned' %>" class="h-full w-full object-cover" />
+                      <% } else { %>
+                        <span><%= initials(s.speaker_name || 'Open') %></span>
+                      <% } %>
+                    </div>
+                    <span><%= s.speaker_name || 'Unassigned' %></span>
+                  </div>
+                </td>
                 <td class="py-2 px-3">
                   <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs
                     <%= s.status === 'confirmed'
