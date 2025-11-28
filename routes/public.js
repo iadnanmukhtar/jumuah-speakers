@@ -14,6 +14,7 @@ function formatDate(d) {
 }
 
 router.get('/public/schedule', (req, res) => {
+  console.log('Fetching upcoming Jumuah schedules for public view.');
   ensureUpcomingJumuahs(err => {
     if (err) console.error(err);
 
@@ -33,14 +34,17 @@ router.get('/public/schedule', (req, res) => {
       ORDER BY s.date ASC, s.time ASC
     `;
 
+    console.log('Querying schedules between', startStr, 'and', endStr);
     db.query(sql, [startStr, endStr], (err2, results) => {
       if (err2) {
+        console.log('Database error while fetching schedules:' + err2.message);
         console.error(err2);
         return res.status(500).render('not_found', { title: 'Schedule unavailable' });
       }
 
+      console.log('Schedules fetched:', results.length);
       res.render('public_schedule', {
-        title: 'Masjid al-Husna | Upcoming Jumuah (Next 3 Weeks)',
+        title: 'Masjid al-Husna | Upcoming Jumuah',
         schedules: results || [],
         dateRange: { start: startStr, end: endStr }
       });
