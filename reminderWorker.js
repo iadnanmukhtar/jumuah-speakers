@@ -41,8 +41,9 @@ function startReminderWorker() {
             // 24-hour reminder: between 23h and 24h before
             if (!s.reminder_24_sent && diffMs <= 24 * HOUR && diffMs > 23 * HOUR) {
               const dateStr = eventDate.toISOString().split('T')[0];
+              const subject = `24-hour Jumuah reminder — ${formatDateLong(eventDate)}`;
               const msg = `Reminder: You are scheduled for Jumuah tomorrow (${dateStr}) at ${s.time}. Topic: ${s.topic || 'TBD'}.`;
-              await notifySpeaker(s, msg, '24-hour Jumuah reminder');
+              await notifySpeaker(s, msg, subject);
 
               db.query(
                 `UPDATE schedules SET reminder_24_sent = 1 WHERE id = ?`,
@@ -56,8 +57,9 @@ function startReminderWorker() {
             // 6-hour reminder: between 5h and 6h before
             if (!s.reminder_6_sent && diffMs <= 6 * HOUR && diffMs > 5 * HOUR) {
               const dateStr = eventDate.toISOString().split('T')[0];
+              const subject = `6-hour Jumuah reminder — ${formatDateLong(eventDate)}`;
               const msg = `Reminder: You are scheduled for Jumuah today (${dateStr}) at ${s.time}. Please arrive early.`;
-              await notifySpeaker(s, msg, '6-hour Jumuah reminder');
+              await notifySpeaker(s, msg, subject);
 
               db.query(
                 `UPDATE schedules SET reminder_6_sent = 1 WHERE id = ?`,
@@ -97,6 +99,8 @@ function startReminderWorker() {
       const firstThree = grouped.slice(0, 3);
       const lines = [];
       lines.push('Upcoming Jumuah coverage (next 3 Fridays):');
+      const firstDate = firstThree[0]?.items?.[0]?.date;
+      const subjectDate = firstDate ? formatDateLong(firstDate) : null;
       for (const g of firstThree) {
         const readableDate = formatDateLong(g.items[0].date);
         lines.push(`- ${readableDate}:`);
@@ -108,7 +112,11 @@ function startReminderWorker() {
         });
       }
 
-      await notifyAdmin('Jumuah coverage: next 3 Fridays', lines.join('\n'));
+      const subject = subjectDate
+        ? `Jumuah coverage: next 3 Fridays (starting ${subjectDate})`
+        : 'Jumuah coverage: next 3 Fridays';
+
+      await notifyAdmin(subject, lines.join('\n'));
     } catch (err) {
       console.error('[Reminders] Error sending admin summary', err);
     }

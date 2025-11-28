@@ -6,6 +6,7 @@ const { ensureAuthenticated, ensureAdmin } = require('../middleware/auth');
 const { ensureUpcomingJumuahs } = require('./helpers');
 const { normalizePhone } = require('../utils/phone');
 const { notifySpeaker, notifyAdmin } = require('../notify');
+const { formatDateLong } = require('../utils/viewHelpers');
 
 const router = express.Router();
 
@@ -71,7 +72,8 @@ router.post('/admin/reminders/send', ensureAuthenticated, ensureAdmin, async (re
       lines.push(`- ${slot.time}: ${status} | Topic: ${slot.topic || 'TBD'}`);
     });
 
-    await notifyAdmin('Jumuah reminders (upcoming Jumuah)', lines.join('\n'));
+    const subject = `Jumuah reminders (upcoming Jumuah — ${formatDateLong(nextFriday)})`;
+    await notifyAdmin(subject, lines.join('\n'));
 
     req.session.flash = {
       type: 'success',
