@@ -23,11 +23,21 @@
 %>
 <section class="space-y-6">
   <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-5">
-    <h1 class="text-xl font-semibold text-emerald-800 mb-1">Admin - Jumuah Schedules</h1>
-    <p class="text-sm text-slate-500">
-      Create, edit, and assign speakers for upcoming Jumuah prayers.
-      Standard times are 14:00 and 14:45, but you can adjust if needed.
-    </p>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h1 class="text-xl font-semibold text-emerald-800 mb-1">Admin - Jumuah Schedules</h1>
+        <p class="text-sm text-slate-500">
+          Create, edit, and assign speakers for upcoming Jumuah prayers.
+          Standard times are 14:00 and 14:45, but you can adjust if needed.
+        </p>
+      </div>
+      <form action="/admin/reminders/send" method="post" onsubmit="return confirm('Send reminders to upcoming Friday speakers and email admins?');">
+        <button
+          class="px-4 py-2 rounded-full border border-emerald-600 text-emerald-800 text-xs font-semibold hover:bg-emerald-50">
+          Send upcoming Friday reminders
+        </button>
+      </form>
+    </div>
   </div>
 
   <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-5">

@@ -1,0 +1,48 @@
+<%
+  const { formatDateLong, formatTime, initials } = helpers;
+%>
+
+<% if (items && items.length > 0) { %>
+  <div class="hidden sm:block overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead>
+        <tr class="bg-emerald-50 text-emerald-900">
+          <th class="py-2 px-3 text-left">Date</th>
+          <th class="py-2 px-3 text-left">Time</th>
+          <th class="py-2 px-3 text-left">Speaker</th>
+          <th class="py-2 px-3 text-left">Topic</th>
+          <th class="py-2 px-3 text-left">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% items.forEach(s => { %>
+          <tr class="border-b border-slate-100">
+            <td class="py-2 px-3"><%= formatDateLong(s.date) %></td>
+            <td class="py-2 px-3"><%= formatTime(s.time) %></td>
+            <td class="py-2 px-3">
+              <div class="flex items-center gap-2">
+                <div class="h-8 w-8 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-semibold">
+                  <% if (s.speaker_avatar) { %>
+                    <img src="<%= s.speaker_avatar %>" alt="<%= s.speaker_name || 'Open' %>" class="h-full w-full object-cover" />
+                  <% } else { %>
+                    <span><%= initials(s.speaker_name || 'Open') %></span>
+                  <% } %>
+                </div>
+                <span><%= s.speaker_name || 'Open slot' %></span>
+              </div>
+            </td>
+            <td class="py-2 px-3 text-slate-700"><%= s.topic || 'TBD' %></td>
+            <td class="py-2 px-3">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs
+                <%= s.status === 'confirmed'
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                    : 'bg-slate-100 text-slate-700 border border-slate-300' %>">
+                <%= s.status %>
+              </span>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>

@@ -8,6 +8,7 @@ const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
 const MySQLStore = require('express-mysql-session')(session);
 const flashMiddleware = require('./middleware/flash');
+const viewLocals = require('./middleware/viewLocals');
 const db = require('./db');
 const { startReminderWorker } = require('./reminderWorker');
 
@@ -50,6 +51,7 @@ app.use(
 
 app.use(expressLayouts);
 app.use(flashMiddleware);
+app.use(viewLocals);
 
 app.use(authRoutes);
 app.use(dashboardRoutes);

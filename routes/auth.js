@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db');
 const { ensureAuthenticated } = require('../middleware/auth');
-const { ensureUpcomingJumuahs } = require('./helpers');
+const { getUpcomingSchedules, partitionUpcoming } = require('../services/scheduleService');
 const { normalizePhone } = require('../utils/phone');
 
 const router = express.Router();
@@ -59,40 +59,26 @@ router.post('/register', (req, res) => {
 router.get('/login', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
 
-  ensureUpcomingJumuahs(err => {
-    if (err) console.error(err);
-
-    const today = new Date();
-    const end = new Date(today);
-    end.setDate(end.getDate() + 21);
-
-    const todayStr = today.toISOString().split('T')[0];
-    const endStr = end.toISOString().split('T')[0];
-    const sql = `
-      SELECT s.*, u.name AS speaker_name
-      , u.avatar_url AS speaker_avatar
-      FROM schedules s
-      LEFT JOIN users u ON s.speaker_id = u.id
-      WHERE s.date >= ? AND s.date <= ?
-      ORDER BY s.date ASC, s.time ASC
-      LIMIT 8
-    `;
-
-    db.query(sql, [todayStr, endStr], (err2, results) => {
-      if (err2) {
-        console.error(err2);
-        return res.render('login', {
-          title: 'Masjid al-Husna Jumuah Speaker Scheduler',
-          publicSchedules: []
-        });
-      }
-
+  getUpcomingSchedules(21, 12)
+    .then(({ schedules, range }) => {
+      const viewModel = partitionUpcoming(schedules);
       res.render('login', {
         title: 'Masjid al-Husna Jumuah Speaker Scheduler',
-        publicSchedules: results || []
+        publicSchedules: schedules || [],
+        range,
+        ...viewModel
+      });
+    })
+    .catch(err => {
+      console.error(err);
+      res.render('login', {
+        title: 'Masjid al-Husna Jumuah Speaker Scheduler',
+        publicSchedules: [],
+        range: null,
+        upcomingSlots: [],
+        remaining: []
       });
     });
-  });
 });
 
 // Speaker login via phone

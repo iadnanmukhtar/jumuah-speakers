@@ -5,13 +5,84 @@ const db = require('../db');
 const { ensureAuthenticated, ensureAdmin } = require('../middleware/auth');
 const { ensureUpcomingJumuahs } = require('./helpers');
 const { normalizePhone } = require('../utils/phone');
-const { notifySpeaker } = require('../notify');
+const { notifySpeaker, notifyAdmin } = require('../notify');
 
 const router = express.Router();
 
 router.post('/admin/toggle-view', ensureAuthenticated, ensureAdmin, (req, res) => {
   req.session.adminView = !req.session.adminView;
   res.redirect('/dashboard');
+});
+
+router.post('/admin/reminders/send', ensureAuthenticated, ensureAdmin, async (req, res) => {
+  try {
+    await new Promise(resolve => ensureUpcomingJumuahs(() => resolve()));
+
+    const nextFriday = (() => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      while (d.getDay() !== 5) {
+        d.setDate(d.getDate() + 1);
+      }
+      return d;
+    })();
+
+    const dateStr = nextFriday.toISOString().split('T')[0];
+
+    const slots = await new Promise((resolve, reject) => {
+      db.query(
+        `
+        SELECT s.*, u.name AS speaker_name, u.email AS speaker_email, u.phone AS speaker_phone
+        FROM schedules s
+        LEFT JOIN users u ON s.speaker_id = u.id
+        WHERE s.date = ?
+        ORDER BY s.time ASC
+      `,
+        [dateStr],
+        (err, results) => {
+          if (err) return reject(err);
+          resolve(results || []);
+        }
+      );
+    });
+
+    if (!slots || slots.length === 0) {
+      req.session.flash = { type: 'error', message: 'No schedules found for the upcoming Friday.' };
+      return res.redirect('/admin/schedules');
+    }
+
+    let speakerNotified = 0;
+    for (const s of slots) {
+      if (s.speaker_id) {
+        const msg = `Reminder: You are scheduled for Jumuah on ${dateStr} at ${s.time}. Topic: ${s.topic || 'TBD'}. - Masjid al-Husna`;
+        await notifySpeaker(
+          { id: s.speaker_id, name: s.speaker_name, email: s.speaker_email, phone: s.speaker_phone },
+          msg,
+          'Jumuah reminder'
+        );
+        speakerNotified += 1;
+      }
+    }
+
+    const lines = [];
+    lines.push(`Reminder dispatch for ${dateStr}`);
+    slots.forEach(slot => {
+      const status = slot.speaker_id ? `Speaker: ${slot.speaker_name || 'TBD'}` : 'OPEN SLOT';
+      lines.push(`- ${slot.time}: ${status} | Topic: ${slot.topic || 'TBD'}`);
+    });
+
+    await notifyAdmin('Jumuah reminders (upcoming Friday)', lines.join('\n'));
+
+    req.session.flash = {
+      type: 'success',
+      message: `Manual reminders sent. Speakers notified: ${speakerNotified}. Admin summary emailed.`
+    };
+    return res.redirect('/admin/schedules');
+  } catch (err) {
+    console.error('Error sending manual reminders', err);
+    req.session.flash = { type: 'error', message: 'Could not send manual reminders.' };
+    return res.redirect('/admin/schedules');
+  }
 });
 
 router.get('/admin/schedules', ensureAuthenticated, ensureAdmin, (req, res) => {

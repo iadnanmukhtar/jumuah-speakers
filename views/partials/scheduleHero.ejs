@@ -1,0 +1,48 @@
+<%
+  const { formatDateLong, formatTime, initials } = helpers;
+%>
+
+<% if (upcomingSlots && upcomingSlots.length > 0) { %>
+  <div class="px-6 sm:px-8 pb-6">
+    <div class="bg-white/10 border border-white/15 rounded-xl p-5 sm:p-6 shadow-lg backdrop-blur">
+      <div class="flex flex-col gap-4 text-white">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-emerald-100">Next Jumuah</div>
+          <div class="text-xl font-semibold"><%= formatDateLong(upcomingSlots[0].date) %></div>
+          <div class="text-sm text-emerald-50">Two khutbah times: 2:00 PM and 2:45 PM</div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <% upcomingSlots.forEach(slot => { %>
+            <div class="bg-white/10 border border-white/15 rounded-lg p-4 flex items-start justify-between gap-3">
+              <div class="space-y-1">
+                <div class="text-sm font-semibold text-white"><%= formatTime(slot.time) %></div>
+                <div class="text-sm text-emerald-50">
+                  <span class="font-semibold">Speaker:</span> <%= slot.speaker_name || 'Open slot' %>
+                </div>
+                <div class="text-sm text-emerald-50">
+                  <span class="font-semibold">Topic:</span> <%= slot.topic || 'TBD' %>
+                </div>
+              </div>
+              <div class="flex flex-col items-end gap-2">
+                <div class="h-10 w-10 rounded-full overflow-hidden bg-white/20 border border-white/30 flex items-center justify-center text-sm font-semibold">
+                  <% if (slot.speaker_avatar) { %>
+                    <img src="<%= slot.speaker_avatar %>" alt="<%= slot.speaker_name || 'Open' %>" class="h-full w-full object-cover" />
+                  <% } else { %>
+                    <span><%= initials(slot.speaker_name || 'Open') %></span>
+                  <% } %>
+                </div>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
+                  <%= slot.status === 'confirmed'
+                      ? 'bg-white/80 text-emerald-800'
+                      : 'bg-white/30 text-white border border-white/40' %>">
+                  <%= slot.status %>
+                </span>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% } %>
