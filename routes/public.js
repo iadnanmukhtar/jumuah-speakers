@@ -8,7 +8,7 @@ router.get('/public/schedule', (req, res) => {
     .then(({ schedules, range }) => {
       const viewModel = partitionUpcoming(schedules);
       res.render('public_schedule', {
-        title: 'Masjid al-Husna | Upcoming Jumuah',
+        title: 'Masjid al-Husna | Upcoming Jumuahs',
         schedules,
         range,
         ...viewModel

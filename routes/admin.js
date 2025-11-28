@@ -47,7 +47,7 @@ router.post('/admin/reminders/send', ensureAuthenticated, ensureAdmin, async (re
     });
 
     if (!slots || slots.length === 0) {
-      req.session.flash = { type: 'error', message: 'No schedules found for the upcoming Friday.' };
+      req.session.flash = { type: 'error', message: 'No schedules found for the upcoming Jumuah.' };
       return res.redirect('/admin/schedules');
     }
 
@@ -71,7 +71,7 @@ router.post('/admin/reminders/send', ensureAuthenticated, ensureAdmin, async (re
       lines.push(`- ${slot.time}: ${status} | Topic: ${slot.topic || 'TBD'}`);
     });
 
-    await notifyAdmin('Jumuah reminders (upcoming Friday)', lines.join('\n'));
+    await notifyAdmin('Jumuah reminders (upcoming Jumuah)', lines.join('\n'));
 
     req.session.flash = {
       type: 'success',
