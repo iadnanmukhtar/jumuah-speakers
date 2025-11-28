@@ -15,7 +15,7 @@ if (process.env.SMTP_HOST) {
   });
 }
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@mashid.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@masjid.com';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'no-reply@masjid.com';
 const APP_NAME = 'Masjid al-Husna | Jumuah Speaker Scheduling';
 const APP_URL = 'https://www.masjidalhusna.com/services/jumuah';

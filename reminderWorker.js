@@ -41,7 +41,7 @@ function startReminderWorker() {
             // 24-hour reminder: between 23h and 24h before
             if (!s.reminder_24_sent && diffMs <= 24 * HOUR && diffMs > 23 * HOUR) {
               const dateStr = eventDate.toISOString().split('T')[0];
-              const msg = `Reminder: You are scheduled for Jumuah tomorrow (${dateStr}) at ${s.time}. Topic: ${s.topic || 'TBD'}. - Masjid al-Husna`;
+              const msg = `Reminder: You are scheduled for Jumuah tomorrow (${dateStr}) at ${s.time}. Topic: ${s.topic || 'TBD'}.`;
               await notifySpeaker(s, msg, '24-hour Jumuah reminder');
 
               db.query(
@@ -56,7 +56,7 @@ function startReminderWorker() {
             // 6-hour reminder: between 5h and 6h before
             if (!s.reminder_6_sent && diffMs <= 6 * HOUR && diffMs > 5 * HOUR) {
               const dateStr = eventDate.toISOString().split('T')[0];
-              const msg = `Reminder: You are scheduled for Jumuah today (${dateStr}) at ${s.time}. Please arrive early. - Masjid al-Husna`;
+              const msg = `Reminder: You are scheduled for Jumuah today (${dateStr}) at ${s.time}. Please arrive early.`;
               await notifySpeaker(s, msg, '6-hour Jumuah reminder');
 
               db.query(
