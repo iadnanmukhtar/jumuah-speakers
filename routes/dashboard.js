@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { ensureAuthenticated } = require('../middleware/auth');
+const { blockIfReadOnly } = require('../middleware/readOnly');
 const { ensureUpcomingJumuahs } = require('./helpers');
 const { notifySpeaker, notifyAdmin } = require('../notify');
 
@@ -65,7 +66,7 @@ router.get('/schedules', ensureAuthenticated, (req, res) => {
 });
 
 // Opt-in
-router.post('/schedules/:id/opt-in', ensureAuthenticated, (req, res) => {
+router.post('/schedules/:id/opt-in', ensureAuthenticated, blockIfReadOnly('/schedules'), (req, res) => {
   const scheduleId = req.params.id;
   const user = req.session.user;
   const topicInput = (req.body.topic || '').trim();
@@ -121,7 +122,7 @@ router.post('/schedules/:id/opt-in', ensureAuthenticated, (req, res) => {
 });
 
 // Update topic for a confirmed slot
-router.post('/schedules/:id/topic', ensureAuthenticated, (req, res) => {
+router.post('/schedules/:id/topic', ensureAuthenticated, blockIfReadOnly('/dashboard'), (req, res) => {
   const scheduleId = req.params.id;
   const user = req.session.user;
   const topic = (req.body.topic || '').trim().slice(0, 255);
@@ -161,7 +162,7 @@ router.post('/schedules/:id/topic', ensureAuthenticated, (req, res) => {
 });
 
 // Cancel
-router.post('/schedules/:id/cancel', ensureAuthenticated, (req, res) => {
+router.post('/schedules/:id/cancel', ensureAuthenticated, blockIfReadOnly('/dashboard'), (req, res) => {
   const scheduleId = req.params.id;
   const user = req.session.user;
 

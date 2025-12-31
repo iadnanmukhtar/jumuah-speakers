@@ -59,12 +59,14 @@
             <% if (currentUser.is_admin) { %>
               <a href="/admin/schedules" class="hover:text-emerald-700 text-slate-700">Admin</a>
               <a href="/admin/speakers" class="hover:text-emerald-700 text-slate-700">Speakers</a>
-              <form action="/admin/toggle-view" method="post" class="inline">
-                <button
-                  class="text-xs px-2 py-1 rounded border border-emerald-600 text-emerald-700 hover:bg-emerald-50">
-                  View: <%= adminView ? "Admin" : "Speaker" %>
-                </button>
-              </form>
+              <% if (!readOnlyMode) { %>
+                <form action="/admin/toggle-view" method="post" class="inline">
+                  <button
+                    class="text-xs px-2 py-1 rounded border border-emerald-600 text-emerald-700 hover:bg-emerald-50">
+                    View: <%= adminView ? "Admin" : "Speaker" %>
+                  </button>
+                </form>
+              <% } %>
             <% } %>
           </nav>
 
@@ -128,12 +130,14 @@
             <% if (currentUser.is_admin) { %>
               <a href="/admin/schedules" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Admin</a>
               <a href="/admin/speakers" class="px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">Speakers</a>
-              <form action="/admin/toggle-view" method="post">
-                <button
-                  class="w-full text-left px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">
-                  View: <%= adminView ? "Admin" : "Speaker" %>
-                </button>
-              </form>
+              <% if (!readOnlyMode) { %>
+                <form action="/admin/toggle-view" method="post">
+                  <button
+                    class="w-full text-left px-3 py-2 rounded border border-emerald-100 text-emerald-800 hover:bg-emerald-50">
+                    View: <%= adminView ? "Admin" : "Speaker" %>
+                  </button>
+                </form>
+              <% } %>
             <% } %>
           </div>
         <% } else { %>
@@ -149,6 +153,14 @@
       </div>
     </div>
   </header>
+
+  <% if (readOnlyMode) { %>
+    <div class="bg-amber-50 border-y border-amber-200 text-amber-900">
+      <div class="max-w-5xl mx-auto px-4 py-2 text-sm">
+        Read-only mode is enabled. Speakers and admins can view information, but changes are disabled.
+      </div>
+    </div>
+  <% } %>
 
   <main class="max-w-5xl mx-auto px-4 py-6 w-full">
     <% if (flash) { %>

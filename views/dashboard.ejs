@@ -24,6 +24,9 @@
       This is your personalized view of upcoming Jumuah commitments.
       Use the Schedules page to opt in for new dates.
     </p>
+    <% if (readOnlyMode) { %>
+      <p class="text-xs text-amber-700 mt-2">Read-only mode is active. Topic edits and cancellations are currently disabled.</p>
+    <% } %>
   </div>
 
   <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-5">
@@ -61,7 +64,7 @@
 
             <div class="mt-3 text-sm text-slate-700">
               <div class="font-medium text-slate-900">Topic</div>
-              <% if (s.speaker_id === currentUser.id || currentUser.is_admin) { %>
+              <% if (!readOnlyMode && (s.speaker_id === currentUser.id || currentUser.is_admin)) { %>
                 <form action="/schedules/<%= s.id %>/topic" method="post" class="mt-2 space-y-2">
                   <input
                     type="text"
@@ -82,12 +85,18 @@
             </div>
 
             <div class="mt-4">
-              <form action="/schedules/<%= s.id %>/cancel" method="post" data-confirm="Confirm cancel for this Jumuah slot?">
-                <button
-                  class="w-full text-xs px-3 py-2 rounded-full border border-red-400 text-red-700 hover:bg-red-50">
-                  Cancel
-                </button>
-              </form>
+              <% if (!readOnlyMode) { %>
+                <form action="/schedules/<%= s.id %>/cancel" method="post" data-confirm="Confirm cancel for this Jumuah slot?">
+                  <button
+                    class="w-full text-xs px-3 py-2 rounded-full border border-red-400 text-red-700 hover:bg-red-50">
+                    Cancel
+                  </button>
+                </form>
+              <% } else { %>
+                <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 text-center">
+                  Cancellations are disabled in read-only mode.
+                </div>
+              <% } %>
             </div>
           </div>
         <% }) %>
@@ -112,7 +121,7 @@
                 </td>
                 <td class="py-2 px-3"><%= formatTime(s.time) %></td>
                 <td class="py-2 px-3">
-                  <% if (s.speaker_id === currentUser.id || currentUser.is_admin) { %>
+                  <% if (!readOnlyMode && (s.speaker_id === currentUser.id || currentUser.is_admin)) { %>
                     <form action="/schedules/<%= s.id %>/topic" method="post" class="flex items-center gap-2">
                       <input
                         type="text"
@@ -140,12 +149,18 @@
                   </span>
                 </td>
                 <td class="py-2 px-3 text-right">
-                  <form action="/schedules/<%= s.id %>/cancel" method="post" data-confirm="Confirm cancel for this Jumuah slot?">
-                    <button
-                      class="text-xs px-3 py-1 rounded-full border border-red-400 text-red-700 hover:bg-red-50">
-                      Cancel
-                    </button>
-                  </form>
+                  <% if (!readOnlyMode && (s.speaker_id === currentUser.id || currentUser.is_admin)) { %>
+                    <form action="/schedules/<%= s.id %>/cancel" method="post" data-confirm="Confirm cancel for this Jumuah slot?">
+                      <button
+                        class="text-xs px-3 py-1 rounded-full border border-red-400 text-red-700 hover:bg-red-50">
+                        Cancel
+                      </button>
+                    </form>
+                  <% } else if (readOnlyMode) { %>
+                    <span class="text-xs text-amber-700">Actions locked</span>
+                  <% } else { %>
+                    <span class="text-xs text-slate-400">No actions</span>
+                  <% } %>
                 </td>
               </tr>
             <% }) %>

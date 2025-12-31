@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db');
 const { ensureAuthenticated, ensureAdmin } = require('../middleware/auth');
+const { blockIfReadOnly } = require('../middleware/readOnly');
 const { ensureUpcomingJumuahs } = require('./helpers');
 const { normalizePhone } = require('../utils/phone');
 const { notifySpeaker, notifyAdmin } = require('../notify');
@@ -10,12 +11,12 @@ const { formatDateLong } = require('../utils/viewHelpers');
 
 const router = express.Router();
 
-router.post('/admin/toggle-view', ensureAuthenticated, ensureAdmin, (req, res) => {
+router.post('/admin/toggle-view', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/dashboard'), (req, res) => {
   req.session.adminView = !req.session.adminView;
   res.redirect('/dashboard');
 });
 
-router.post('/admin/reminders/send', ensureAuthenticated, ensureAdmin, async (req, res) => {
+router.post('/admin/reminders/send', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/schedules'), async (req, res) => {
   try {
     await new Promise(resolve => ensureUpcomingJumuahs(() => resolve()));
 
@@ -132,7 +133,7 @@ router.get('/admin/schedules', ensureAuthenticated, ensureAdmin, (req, res) => {
   });
 });
 
-router.post('/admin/schedules', ensureAuthenticated, ensureAdmin, (req, res) => {
+router.post('/admin/schedules', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/schedules'), (req, res) => {
   const { date, time, topic, notes } = req.body;
 
   if (!date || !time) {
@@ -198,7 +199,7 @@ router.get('/admin/schedules/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
   );
 });
 
-router.post('/admin/schedules/:id/edit', ensureAuthenticated, ensureAdmin, (req, res) => {
+router.post('/admin/schedules/:id/edit', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/schedules'), (req, res) => {
   const id = req.params.id;
   const { date, time, topic, notes, status, speaker_id } = req.body;
 
@@ -228,7 +229,7 @@ router.post('/admin/schedules/:id/edit', ensureAuthenticated, ensureAdmin, (req,
   );
 });
 
-router.post('/admin/schedules/:id/delete', ensureAuthenticated, ensureAdmin, (req, res) => {
+router.post('/admin/schedules/:id/delete', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/schedules'), (req, res) => {
   const id = req.params.id;
 
   db.query(`DELETE FROM schedules WHERE id = ?`, [id], err => {
@@ -243,7 +244,7 @@ router.post('/admin/schedules/:id/delete', ensureAuthenticated, ensureAdmin, (re
   });
 });
 
-router.post('/admin/schedules/:id/assign', ensureAuthenticated, ensureAdmin, (req, res) => {
+router.post('/admin/schedules/:id/assign', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/schedules'), (req, res) => {
   const id = req.params.id;
   const { speaker_id } = req.body;
   const status = speaker_id ? 'confirmed' : 'open';
@@ -288,7 +289,7 @@ router.get('/admin/speakers', ensureAuthenticated, ensureAdmin, (req, res) => {
   );
 });
 
-router.post('/admin/speakers', ensureAuthenticated, ensureAdmin, (req, res) => {
+router.post('/admin/speakers', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/speakers'), (req, res) => {
   const { name, phone, email, bio, avatar_data } = req.body;
   const normalizedPhone = normalizePhone(phone);
   const trimmedEmail = (email || '').trim();
@@ -401,7 +402,7 @@ router.get('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, r
   );
 });
 
-router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, res) => {
+router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/speakers'), (req, res) => {
   const id = req.params.id;
   const { name, phone, email, bio, avatar_data } = req.body;
   const normalizedPhone = normalizePhone(phone);
@@ -512,7 +513,7 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
   );
 });
 
-router.post('/admin/speakers/:id/delete', ensureAuthenticated, ensureAdmin, (req, res) => {
+router.post('/admin/speakers/:id/delete', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/speakers'), (req, res) => {
   const id = req.params.id;
 
   db.query(`SELECT id, name, email, phone, is_admin, avatar_url FROM users WHERE id = ? LIMIT 1`, [id], (err, results) => {

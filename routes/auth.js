@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db');
 const { ensureAuthenticated } = require('../middleware/auth');
+const { blockIfReadOnly } = require('../middleware/readOnly');
 const { getUpcomingSchedules, partitionUpcoming } = require('../services/scheduleService');
 const { normalizePhone } = require('../utils/phone');
 
@@ -14,7 +15,7 @@ router.get('/register', (req, res) => {
   res.render('register', { title: 'Masjid al-Husna | Jumuah Speaker Registration' });
 });
 
-router.post('/register', (req, res) => {
+router.post('/register', blockIfReadOnly('/register'), (req, res) => {
   const { name, phone, email, bio } = req.body;
   const normalizedPhone = normalizePhone(phone);
   const trimmedEmail = (email || '').trim();
@@ -215,7 +216,7 @@ router.get('/profile', ensureAuthenticated, (req, res) => {
   );
 });
 
-router.post('/profile', ensureAuthenticated, (req, res) => {
+router.post('/profile', ensureAuthenticated, blockIfReadOnly('/profile'), (req, res) => {
   const userId = req.session.user.id;
   const { name, phone, email, bio, avatar_data } = req.body;
   const normalizedPhone = normalizePhone(phone);

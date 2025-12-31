@@ -11,113 +11,122 @@
     <p class="text-sm text-slate-500">
       Update the speaker's contact details. Phone numbers are stored without spaces/parentheses/dashes; +1 is assumed when no country code is provided. Email is optional if you only want to notify by SMS.
     </p>
+    <% if (readOnlyMode) { %>
+      <p class="text-xs text-amber-700 mt-2">Read-only mode is active. You can view this profile, but changes are disabled.</p>
+    <% } %>
   </div>
 
   <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-6">
     <form action="/admin/speakers/<%= speaker.id %>/edit" method="post" class="space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-4 items-center">
-        <div class="flex items-center gap-3">
-          <div class="h-24 w-24 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-semibold relative">
-            <img
-              id="admin-edit-avatar-preview"
-              src="<%= speaker.avatar_url || '' %>"
-              alt="<%= speaker.name %>"
-              class="h-full w-full object-cover <%= speaker.avatar_url ? '' : 'hidden' %>"
-              style="transform: scale(1); transform-origin: center;" />
-            <div id="admin-edit-avatar-placeholder" class="<%= speaker.avatar_url ? 'hidden' : '' %> text-lg">
-              <%= initials(speaker.name) %>
+      <fieldset <%= readOnlyMode ? 'disabled' : '' %> class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-[auto,1fr] gap-4 items-center">
+          <div class="flex items-center gap-3">
+            <div class="h-24 w-24 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-semibold relative">
+              <img
+                id="admin-edit-avatar-preview"
+                src="<%= speaker.avatar_url || '' %>"
+                alt="<%= speaker.name %>"
+                class="h-full w-full object-cover <%= speaker.avatar_url ? '' : 'hidden' %>"
+                style="transform: scale(1); transform-origin: center;" />
+              <div id="admin-edit-avatar-placeholder" class="<%= speaker.avatar_url ? 'hidden' : '' %> text-lg">
+                <%= initials(speaker.name) %>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="space-y-2">
-          <div class="flex items-center justify-between">
-            <label class="block text-sm font-medium text-slate-700" for="admin-edit-avatar-input">
-              Profile photo (optional)
-            </label>
-            <span id="admin-edit-avatar-hint" class="text-xs text-slate-500">Upload and adjust crop.</span>
-          </div>
-          <input
-            id="admin-edit-avatar-input"
-            type="file"
-            accept="image/*"
-            class="text-sm text-slate-700" />
-          <div class="flex items-center gap-2">
-            <label for="admin-edit-avatar-zoom" class="text-xs text-slate-500 w-16">Zoom</label>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-sm font-medium text-slate-700" for="admin-edit-avatar-input">
+                Profile photo (optional)
+              </label>
+              <span id="admin-edit-avatar-hint" class="text-xs text-slate-500">Upload and adjust crop.</span>
+            </div>
             <input
-              id="admin-edit-avatar-zoom"
-              type="range"
-              min="1"
-              max="2.5"
-              step="0.05"
-              value="1"
-              class="w-full accent-emerald-700" />
+              id="admin-edit-avatar-input"
+              type="file"
+              accept="image/*"
+              class="text-sm text-slate-700" />
+            <div class="flex items-center gap-2">
+              <label for="admin-edit-avatar-zoom" class="text-xs text-slate-500 w-16">Zoom</label>
+              <input
+                id="admin-edit-avatar-zoom"
+                type="range"
+                min="1"
+                max="2.5"
+                step="0.05"
+                value="1"
+                class="w-full accent-emerald-700" />
+            </div>
+            <input type="hidden" name="avatar_data" id="admin-edit-avatar-data" />
+            <p class="text-xs text-slate-500">Cropped to a round thumbnail.</p>
           </div>
-          <input type="hidden" name="avatar_data" id="admin-edit-avatar-data" />
-          <p class="text-xs text-slate-500">Cropped to a round thumbnail.</p>
         </div>
-      </div>
 
-      <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1" for="name">Name</label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          required
-          value="<%= speaker.name || '' %>"
-          placeholder="Speaker's full name"
-          class="w-full rounded border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1" for="phone">Phone</label>
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="name">Name</label>
           <input
-            id="phone"
-            name="phone"
+            id="name"
+            name="name"
             type="text"
             required
-            value="<%= speaker.phone || '' %>"
-            placeholder="+1 555 123 4567"
+            value="<%= speaker.name || '' %>"
+            placeholder="Speaker's full name"
             class="w-full rounded border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1" for="phone">Phone</label>
+            <input
+              id="phone"
+              name="phone"
+              type="text"
+              required
+              value="<%= speaker.phone || '' %>"
+              placeholder="+1 555 123 4567"
+              class="w-full rounded border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1" for="email">Email (optional)</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value="<%= speaker.email || '' %>"
+              placeholder="you@example.com"
+              class="w-full rounded border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1" for="email">Email (optional)</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            value="<%= speaker.email || '' %>"
-            placeholder="you@example.com"
-            class="w-full rounded border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          <label class="block text-sm font-medium text-slate-700 mb-1" for="bio">Bio</label>
+          <textarea
+            id="bio"
+            name="bio"
+            rows="4"
+            placeholder="Short intro for organizers"
+            class="w-full rounded border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"><%= speaker.bio || '' %></textarea>
         </div>
-      </div>
 
-      <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1" for="bio">Bio</label>
-        <textarea
-          id="bio"
-          name="bio"
-          rows="4"
-          placeholder="Short intro for organizers"
-          class="w-full rounded border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"><%= speaker.bio || '' %></textarea>
-      </div>
-
-      <div class="pt-2 flex items-center gap-3">
-        <button
-          type="submit"
-          class="px-4 py-2 rounded-full bg-emerald-700 text-white text-sm font-medium hover:bg-emerald-800">
-          Save changes
-        </button>
-        <a href="/admin/speakers" class="text-sm text-slate-500 hover:text-emerald-700">Back to speakers</a>
-      </div>
+        <div class="pt-2 flex items-center gap-3">
+          <button
+            type="submit"
+            <%= readOnlyMode ? 'disabled' : '' %>
+            class="px-4 py-2 rounded-full bg-emerald-700 text-white text-sm font-medium hover:bg-emerald-800 <%= readOnlyMode ? 'opacity-60 cursor-not-allowed' : '' %>">
+            Save changes
+          </button>
+          <a href="/admin/speakers" class="text-sm text-slate-500 hover:text-emerald-700">Back to speakers</a>
+        </div>
+      </fieldset>
     </form>
   </div>
 </section>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    const isReadOnly = <%= readOnlyMode ? 'true' : 'false' %>;
+    if (isReadOnly) return;
+
     const fileInput = document.getElementById('admin-edit-avatar-input');
     const zoomInput = document.getElementById('admin-edit-avatar-zoom');
     const previewImg = document.getElementById('admin-edit-avatar-preview');
