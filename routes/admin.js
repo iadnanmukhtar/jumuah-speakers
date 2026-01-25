@@ -99,6 +99,8 @@ router.get('/admin/schedules', ensureAuthenticated, ensureAdmin, (req, res) => {
       SELECT s.*, u.name AS speaker_name, u.phone AS speaker_phone, u.avatar_url AS speaker_avatar
       FROM schedules s
       LEFT JOIN users u ON s.speaker_id = u.id
+      WHERE s.date >= CURDATE()
+        OR s.date = (SELECT MAX(date) FROM schedules WHERE date < CURDATE())
       ORDER BY s.date ASC, s.time ASC
     `;
 
