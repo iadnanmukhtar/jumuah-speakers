@@ -4,6 +4,7 @@ const { ensureAuthenticated } = require('../middleware/auth');
 const { blockIfReadOnly } = require('../middleware/readOnly');
 const { ensureUpcomingJumuahs } = require('./helpers');
 const { notifySpeaker, notifyAdmin } = require('../notify');
+const { getLastSpeakerUpdateDate } = require('../utils/scheduleStats');
 
 const router = express.Router();
 
@@ -28,9 +29,12 @@ router.get('/dashboard', ensureAuthenticated, (req, res) => {
         return res.redirect('/');
       }
 
+      const lastUpdated = getLastSpeakerUpdateDate(results || []);
+
       res.render('dashboard', {
         title: 'Masjid al-Husna | My Jumuah Commitments',
-        schedules: results || []
+        schedules: results || [],
+        lastUpdated
       });
     });
   });

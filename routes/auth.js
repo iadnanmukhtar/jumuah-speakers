@@ -5,6 +5,7 @@ const db = require('../db');
 const { ensureAuthenticated } = require('../middleware/auth');
 const { blockIfReadOnly } = require('../middleware/readOnly');
 const { getUpcomingSchedules, partitionUpcoming } = require('../services/scheduleService');
+const { getLastSpeakerUpdateDate } = require('../utils/scheduleStats');
 const { normalizePhone } = require('../utils/phone');
 
 const router = express.Router();
@@ -63,10 +64,15 @@ router.get('/login', (req, res) => {
   getUpcomingSchedules(21, 12)
     .then(({ schedules, range }) => {
       const viewModel = partitionUpcoming(schedules);
+      const lastUpdated = getLastSpeakerUpdateDate(schedules);
+      if (lastUpdated) {
+        res.set('Last-Modified', new Date(lastUpdated).toUTCString());
+      }
       res.render('login', {
         title: 'Masjid al-Husna Jumuah Speaker Scheduler',
         publicSchedules: schedules || [],
         range,
+        lastUpdated,
         ...viewModel
       });
     })
@@ -76,6 +82,7 @@ router.get('/login', (req, res) => {
         title: 'Masjid al-Husna Jumuah Speaker Scheduler',
         publicSchedules: [],
         range: null,
+        lastUpdated: null,
         upcomingSlots: [],
         remaining: []
       });

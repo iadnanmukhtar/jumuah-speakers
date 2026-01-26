@@ -12,11 +12,17 @@
           Snapshot of the next three Fridays at Masjid al-Husna
         </p>
       </div>
-      <a
-        href="/register"
-        class="inline-flex items-center justify-center text-xs px-3 py-1.5 rounded-full border border-white/50 text-white hover:bg-white/10">
-        Become a speaker
-      </a>
+      <div class="flex flex-col items-start sm:items-end gap-1 sm:gap-2">
+        <a
+          href="/register"
+          class="inline-flex items-center justify-center text-xs px-3 py-1.5 rounded-full border border-white/50 text-white hover:bg-white/10">
+          Become a speaker
+        </a>
+        <div class="text-[11px] uppercase tracking-wide text-emerald-100">Last updated</div>
+        <div class="text-sm text-white font-semibold">
+          <%= lastUpdated ? helpers.formatDateLong(lastUpdated) : 'No speaker updates yet' %>
+        </div>
+      </div>
     </div>
 
     <%- include('partials/scheduleHero', { upcomingSlots }) %>
