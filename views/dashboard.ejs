@@ -14,6 +14,18 @@
     date.setHours(h, m, 0, 0);
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
+
+  const isPastSchedule = s => {
+    const dateObj = s.date instanceof Date ? s.date : new Date(s.date);
+    if (isNaN(dateObj)) return false;
+    const [hStr, mStr] = (s.time || '').split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (Number.isNaN(h) || Number.isNaN(m)) return false;
+    const dt = new Date(dateObj);
+    dt.setHours(h, m, 0, 0);
+    return dt < new Date();
+  };
 %>
 <section class="space-y-6">
   <div class="bg-white rounded-lg shadow-sm border border-emerald-100 p-5">
@@ -93,17 +105,19 @@
             </div>
 
             <div class="mt-4">
-              <% if (!readOnlyMode) { %>
+              <% if (!readOnlyMode && !isPastSchedule(s)) { %>
                 <form action="/schedules/<%= s.id %>/cancel" method="post" data-confirm="Confirm cancel for this Jumuah slot?">
                   <button
                     class="w-full text-xs px-3 py-2 rounded-full border border-red-400 text-red-700 hover:bg-red-50">
                     Cancel
                   </button>
                 </form>
-              <% } else { %>
+              <% } else if (readOnlyMode) { %>
                 <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 text-center">
                   Cancellations are disabled in read-only mode.
                 </div>
+              <% } else { %>
+                <div class="text-xs text-slate-400 text-center">Past schedules cannot be cancelled.</div>
               <% } %>
             </div>
           </div>
@@ -157,7 +171,7 @@
                   </span>
                 </td>
                 <td class="py-2 px-3 text-right">
-                  <% if (!readOnlyMode && (s.speaker_id === currentUser.id || currentUser.is_admin)) { %>
+                  <% if (!readOnlyMode && (s.speaker_id === currentUser.id || currentUser.is_admin) && !isPastSchedule(s)) { %>
                     <form action="/schedules/<%= s.id %>/cancel" method="post" data-confirm="Confirm cancel for this Jumuah slot?">
                       <button
                         class="text-xs px-3 py-1 rounded-full border border-red-400 text-red-700 hover:bg-red-50">
@@ -166,6 +180,8 @@
                     </form>
                   <% } else if (readOnlyMode) { %>
                     <span class="text-xs text-amber-700">Actions locked</span>
+                  <% } else if (isPastSchedule(s)) { %>
+                    <span class="text-xs text-slate-400">Past schedule</span>
                   <% } else { %>
                     <span class="text-xs text-slate-400">No actions</span>
                   <% } %>

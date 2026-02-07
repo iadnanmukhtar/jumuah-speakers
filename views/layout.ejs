@@ -25,19 +25,19 @@
 <body class="min-h-full flex flex-col bg-gradient-to-b from-emerald-50 to-slate-100">
   <header class="bg-white shadow-sm border-b border-emerald-100">
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-2">
+      <a href="/" class="flex items-center gap-2 group">
         <div class="h-9 w-9 rounded-full bg-emerald-700 flex items-center justify-center text-white font-bold overflow-hidden">
           <img src="/assets/logo.png" alt="Masjid al-Husna" class="h-full w-full object-cover" />
         </div>
         <div>
-          <div class="text-emerald-800 font-semibold text-lg">
+          <div class="text-emerald-800 font-semibold text-lg group-hover:underline underline-offset-4 decoration-emerald-600">
             Masjid al-Husna
           </div>
           <div class="text-xs text-slate-500">
             Jumuah Speaker Scheduling
           </div>
         </div>
-      </div>
+      </a>
 
       <div class="flex items-center gap-3">
         <button
@@ -50,15 +50,15 @@
         </button>
 
         <% if (currentUser) { %>
-          <nav class="hidden sm:flex items-center gap-3 text-sm">
-            <a href="/dashboard" class="hover:text-emerald-700 text-slate-700">Dashboard</a>
-            <a href="/profile" class="hover:text-emerald-700 text-slate-700">Profile</a>
-            <a href="/schedules" class="hover:text-emerald-700 text-slate-700">Schedules</a>
-            <a href="/public/schedule" class="hover:text-emerald-700 text-slate-700">Public schedule</a>
+          <nav class="hidden sm:flex items-center gap-5 text-sm">
+            <a href="/dashboard" class="hover:text-emerald-700 hover:underline underline-offset-4 decoration-emerald-600 text-slate-700">Dashboard</a>
+            <a href="/profile" class="hover:text-emerald-700 hover:underline underline-offset-4 decoration-emerald-600 text-slate-700">Profile</a>
+            <a href="/schedules" class="hover:text-emerald-700 hover:underline underline-offset-4 decoration-emerald-600 text-slate-700">Schedules</a>
+            <a href="/public/schedule" class="hover:text-emerald-700 hover:underline underline-offset-4 decoration-emerald-600 text-slate-700">Public Schedule</a>
 
             <% if (currentUser.is_admin) { %>
-              <a href="/admin/schedules" class="hover:text-emerald-700 text-slate-700">Admin</a>
-              <a href="/admin/speakers" class="hover:text-emerald-700 text-slate-700">Speakers</a>
+              <a href="/admin/schedules" class="hover:text-emerald-700 hover:underline underline-offset-4 decoration-emerald-600 text-slate-700">Admin</a>
+              <a href="/admin/speakers" class="hover:text-emerald-700 hover:underline underline-offset-4 decoration-emerald-600 text-slate-700">Speakers</a>
               <% if (!readOnlyMode) { %>
                 <form action="/admin/toggle-view" method="post" class="inline">
                   <button
@@ -89,9 +89,9 @@
             </form>
           </div>
         <% } else { %>
-          <div class="hidden sm:flex gap-2">
-            <a href="/public/schedule" class="text-sm text-emerald-700 hover:underline">Public schedule</a>
-            <a href="/login" class="text-sm text-emerald-700 hover:underline">Login</a>
+          <div class="hidden sm:flex gap-4">
+            <a href="/public/schedule" class="text-sm text-emerald-700 hover:underline underline-offset-4 decoration-emerald-600">Public Schedule</a>
+            <a href="/login" class="text-sm text-emerald-700 hover:underline underline-offset-4 decoration-emerald-600">Login</a>
             <a href="/register"
                class="text-sm px-3 py-1 rounded-full bg-emerald-700 text-white hover:bg-emerald-800">
               Register

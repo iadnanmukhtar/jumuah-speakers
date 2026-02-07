@@ -188,6 +188,23 @@ router.post('/schedules/:id/cancel', ensureAuthenticated, blockIfReadOnly('/dash
         return res.redirect('/dashboard');
       }
 
+      const dateStr = schedule.date instanceof Date
+        ? schedule.date.toISOString().split('T')[0]
+        : String(schedule.date);
+
+      const scheduleDateTime = new Date(`${dateStr}T${schedule.time || '00:00'}`);
+
+      if (Number.isNaN(scheduleDateTime.getTime())) {
+        console.error('Invalid schedule date/time for cancellation', schedule);
+        req.session.flash = { type: 'error', message: 'Invalid schedule date.' };
+        return res.redirect('/dashboard');
+      }
+
+      if (scheduleDateTime < new Date()) {
+        req.session.flash = { type: 'error', message: 'Past schedules cannot be cancelled.' };
+        return res.redirect('/dashboard');
+      }
+
       const updateSql = `
         UPDATE schedules
         SET speaker_id = NULL,
@@ -203,10 +220,6 @@ router.post('/schedules/:id/cancel', ensureAuthenticated, blockIfReadOnly('/dash
           req.session.flash = { type: 'error', message: 'Could not cancel this commitment.' };
           return res.redirect('/dashboard');
         }
-
-        const dateStr = schedule.date instanceof Date
-          ? schedule.date.toISOString().split('T')[0]
-          : schedule.date;
 
         const msg = `Your Jumuah commitment on ${dateStr} at ${schedule.time} has been cancelled. - Masjid al-Husna`;
         const adminInfo = `Speaker ${user.name} (phone: ${user.phone || 'N/A'}, email: ${user.email || 'N/A'}) has cancelled their Jumuah commitment on ${dateStr} at ${schedule.time}. Topic: ${schedule.topic || 'N/A'}`;
