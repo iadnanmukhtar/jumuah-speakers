@@ -26,3 +26,4 @@ module.exports = {
   ensureAuthenticated,
   ensureAdmin
 };
+// @ts-check

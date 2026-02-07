@@ -1,13 +1,18 @@
+// @ts-check
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const config = require('../config');
 const db = require('../db');
 const { ensureAuthenticated, ensureAdmin } = require('../middleware/auth');
 const { blockIfReadOnly } = require('../middleware/readOnly');
-const { ensureUpcomingJumuahs } = require('./helpers');
+const { ensureUpcomingJumuahs } = require('../services/scheduleService');
 const { normalizePhone } = require('../utils/phone');
 const { notifySpeaker, notifyAdmin } = require('../notify');
 const { formatDateLong } = require('../utils/viewHelpers');
+const { saveAvatar } = require('../utils/avatar');
+/** @typedef {import('../types').User} User */
+/** @typedef {import('../types').Schedule} Schedule */
 
 const router = express.Router();
 
@@ -20,6 +25,7 @@ router.post('/admin/reminders/send', ensureAuthenticated, ensureAdmin, blockIfRe
   try {
     await new Promise(resolve => ensureUpcomingJumuahs(() => resolve()));
 
+    // Find the next Friday from today to scope manual reminders.
     const nextFriday = (() => {
       const d = new Date();
       d.setHours(0, 0, 0, 0);
@@ -73,8 +79,8 @@ router.post('/admin/reminders/send', ensureAuthenticated, ensureAdmin, blockIfRe
       lines.push(`- ${slot.time}: ${status} | Topic: ${slot.topic || 'TBD'}`);
     });
 
-    const subject = `Jumuah reminders (upcoming Jumuah — ${formatDateLong(nextFriday)})`;
-    await notifyAdmin(subject, lines.join('\n'));
+        const subject = `Jumuah reminders (upcoming Jumuah — ${formatDateLong(nextFriday)})`;
+        await notifyAdmin(subject, lines.join('\n'));
 
     req.session.flash = {
       type: 'success',
@@ -302,31 +308,6 @@ router.post('/admin/speakers', ensureAuthenticated, ensureAdmin, blockIfReadOnly
   }
 
   const uploadData = (avatar_data || '').trim();
-  let avatarBuffer = null;
-  let avatarExt = null;
-
-  if (uploadData) {
-    const match = uploadData.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
-    if (!match) {
-      req.session.flash = { type: 'error', message: 'Profile photo must be a PNG or JPG.' };
-      return res.redirect('/admin/speakers');
-    }
-
-    avatarExt = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
-    try {
-      avatarBuffer = Buffer.from(match[2], 'base64');
-    } catch (e) {
-      console.error('Error decoding avatar data', e);
-      req.session.flash = { type: 'error', message: 'Could not process profile photo.' };
-      return res.redirect('/admin/speakers');
-    }
-
-    const maxBytes = 1.5 * 1024 * 1024;
-    if (!avatarBuffer || avatarBuffer.length === 0 || avatarBuffer.length > maxBytes) {
-      req.session.flash = { type: 'error', message: 'Profile photo is too large. Please use a smaller image.' };
-      return res.redirect('/admin/speakers');
-    }
-  }
 
   const sql = `
     INSERT INTO users (name, email, phone, bio, password_hash, is_admin)
@@ -351,17 +332,10 @@ router.post('/admin/speakers', ensureAuthenticated, ensureAdmin, blockIfReadOnly
       return res.redirect('/admin/speakers');
     };
 
-    if (!avatarBuffer) return finalize();
+    if (!uploadData) return finalize();
 
     try {
-      const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-      const fileName = `avatar-${newId}-${Date.now()}.${avatarExt}`;
-      const filePath = path.join(uploadDir, fileName);
-      fs.writeFileSync(filePath, avatarBuffer);
-
-      const avatarUrl = `/uploads/${fileName}`;
+      const avatarUrl = saveAvatar(newId, uploadData, null);
       db.query(
         `UPDATE users SET avatar_url = ? WHERE id = ?`,
         [avatarUrl, newId],
@@ -376,7 +350,7 @@ router.post('/admin/speakers', ensureAuthenticated, ensureAdmin, blockIfReadOnly
       );
     } catch (e) {
       console.error('Error saving avatar', e);
-      req.session.flash = { type: 'error', message: 'Speaker added, but photo could not be saved.' };
+      req.session.flash = { type: 'error', message: e.message || 'Speaker added, but photo could not be saved.' };
       return res.redirect('/admin/speakers');
     }
   });
@@ -431,46 +405,11 @@ router.post('/admin/speakers/:id/edit', ensureAuthenticated, ensureAdmin, blockI
       let updateAvatarField = false;
 
       if (uploadData) {
-        const match = uploadData.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
-        if (!match) {
-          req.session.flash = { type: 'error', message: 'Profile photo must be a PNG or JPG.' };
-          return res.redirect(`/admin/speakers/${id}/edit`);
-        }
-
-        const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
-        let buffer;
         try {
-          buffer = Buffer.from(match[2], 'base64');
-        } catch (e) {
-          console.error('Error decoding avatar data', e);
-          req.session.flash = { type: 'error', message: 'Could not process profile photo.' };
-          return res.redirect(`/admin/speakers/${id}/edit`);
-        }
-
-        const maxBytes = 1.5 * 1024 * 1024;
-        if (!buffer || buffer.length === 0 || buffer.length > maxBytes) {
-          req.session.flash = { type: 'error', message: 'Profile photo is too large. Please use a smaller image.' };
-          return res.redirect(`/admin/speakers/${id}/edit`);
-        }
-
-        try {
-          const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-          if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-          const fileName = `avatar-${id}-${Date.now()}.${ext}`;
-          const filePath = path.join(uploadDir, fileName);
-          fs.writeFileSync(filePath, buffer);
-
-          if (avatarUrl && avatarUrl.startsWith('/uploads/')) {
-            const oldPath = path.join(uploadDir, path.basename(avatarUrl));
-            fs.unlink(oldPath, () => {});
-          }
-
-          avatarUrl = `/uploads/${fileName}`;
+          avatarUrl = saveAvatar(id, uploadData, avatarUrl);
           updateAvatarField = true;
         } catch (e) {
-          console.error('Error saving avatar', e);
-          req.session.flash = { type: 'error', message: 'Could not save profile photo.' };
+          req.session.flash = { type: 'error', message: e.message || 'Could not save profile photo.' };
           return res.redirect(`/admin/speakers/${id}/edit`);
         }
       }
@@ -547,8 +486,7 @@ router.post('/admin/speakers/:id/delete', ensureAuthenticated, ensureAdmin, bloc
         }
 
         if (speaker.avatar_url && speaker.avatar_url.startsWith('/uploads/')) {
-          const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-          const target = path.join(uploadDir, path.basename(speaker.avatar_url));
+          const target = path.join(config.paths.uploads, path.basename(speaker.avatar_url));
           fs.unlink(target, () => {});
         }
 

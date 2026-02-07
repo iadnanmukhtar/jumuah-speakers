@@ -1,15 +1,19 @@
+// @ts-check
 const express = require('express');
 const db = require('../db');
 const { ensureAuthenticated } = require('../middleware/auth');
 const { blockIfReadOnly } = require('../middleware/readOnly');
-const { ensureUpcomingJumuahs } = require('./helpers');
+const { ensureUpcomingJumuahs } = require('../services/scheduleService');
 const { notifySpeaker, notifyAdmin } = require('../notify');
 const { getLastSpeakerUpdateDate } = require('../utils/scheduleStats');
+/** @typedef {import('../types').User} User */
 
 const router = express.Router();
 
 router.get('/dashboard', ensureAuthenticated, (req, res) => {
-  const userId = req.session.user.id;
+  /** @type {User} */
+  const user = req.session.user;
+  const userId = user.id;
 
   ensureUpcomingJumuahs(err => {
     if (err) console.error(err);

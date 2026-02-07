@@ -1,15 +1,13 @@
-require('dotenv').config();
-
+// @ts-check
 const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const methodOverride = require('method-override');
 const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
-const MySQLStore = require('express-mysql-session')(session);
 const flashMiddleware = require('./middleware/flash');
 const viewLocals = require('./middleware/viewLocals');
-const db = require('./db');
+const config = require('./config');
 const { startReminderWorker } = require('./reminderWorker');
 
 const authRoutes = require('./routes/auth');
@@ -25,26 +23,17 @@ app.set('layout', 'layout');
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
+// Parse HTML form bodies; 5mb cap avoids oversized uploads.
 app.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
 app.use(methodOverride('_method'));
 
-const sessionStore = new MySQLStore(
-  {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || '',
-    database: process.env.DB_NAME || 'jumuah_app'
-  }
-);
-
 app.use(
   session({
-    store: sessionStore,
-    secret: process.env.SESSION_SECRET || 'very-secret-key',
+    secret: config.session.secret,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 1000 * 60 * 60 * 24 * 7
+      maxAge: config.session.maxAgeMs
     }
   })
 );
@@ -69,7 +58,7 @@ app.use((req, res) => {
   res.status(404).render('not_found', { title: 'Not Found' });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = config.port;
 app.listen(PORT, () => {
   console.log(`Jumuah speaker app listening on http://localhost:${PORT}`);
   startReminderWorker();

@@ -1,3 +1,4 @@
+// @ts-check
 const express = require('express');
 const { getUpcomingSchedules, partitionUpcoming } = require('../services/scheduleService');
 const { getLastSpeakerUpdateDate } = require('../utils/scheduleStats');

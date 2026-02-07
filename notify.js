@@ -1,6 +1,13 @@
+// @ts-check
 const { sendSms, isSmsConfigured } = require('./sms');
 const { sendEmail, notifyAdmin } = require('./mailer');
+/** @typedef {import('./types').User} User */
 
+/**
+ * @param {User} user
+ * @param {string} message
+ * @param {string} [subject]
+ */
 async function notifySpeaker(user, message, subject = 'Jumuah notification') {
   try {
     if (isSmsConfigured && user.phone) {

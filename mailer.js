@@ -1,36 +1,41 @@
-require('dotenv').config();
+// @ts-check
 const nodemailer = require('nodemailer');
+const config = require('./config');
+/** @typedef {import('./types').User} User */
 
+// Build a transporter only when SMTP is configured; otherwise we log instead of failing.
 let transporter = null;
 
-if (process.env.SMTP_HOST) {
+if (config.mail.smtpHost) {
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    host: config.mail.smtpHost,
+    port: config.mail.smtpPort,
     secure: false,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
+      user: config.mail.smtpUser,
+      pass: config.mail.smtpPass
     }
   });
 }
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@masjid.com';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'no-reply@masjid.com';
-const APP_NAME = 'Masjid al-Husna | Jumuah Speaker Scheduling';
-const APP_URL = 'https://www.masjidalhusna.com/services/jumuah';
-
 function appendFooter(text) {
   const body = (text || '').trimEnd();
-  const footer = `— ${APP_NAME}\n${APP_URL}`;
+  const footer = `— ${config.app.name}\n${config.app.url}`;
 
-  if (body.includes(APP_URL) || body.includes(APP_NAME)) {
+  if (body.includes(config.app.url) || body.includes(config.app.name)) {
     return body;
   }
 
   return `${body}${body ? '\n\n' : ''}${footer}`;
 }
 
+/**
+ * Send a plain-text email, logging if SMTP is not configured.
+ * @param {string|null|undefined} to
+ * @param {string} subject
+ * @param {string} text
+ * @returns {Promise<void>}
+ */
 async function sendEmail(to, subject, text) {
   if (!to) {
     console.log('[Mailer] No "to" address specified, skipping email.');
@@ -46,15 +51,20 @@ async function sendEmail(to, subject, text) {
   }
 
   await transporter.sendMail({
-    from: FROM_EMAIL,
+    from: config.mail.fromEmail,
     to,
     subject,
     text: finalText
   });
 }
 
+/**
+ * Send an email to the configured admin address.
+ * @param {string} subject
+ * @param {string} text
+ */
 async function notifyAdmin(subject, text) {
-  return sendEmail(ADMIN_EMAIL, subject, text);
+  return sendEmail(config.admin.email, subject, text);
 }
 
 module.exports = {

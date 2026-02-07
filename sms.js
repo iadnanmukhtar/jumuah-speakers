@@ -1,11 +1,12 @@
+// @ts-check
 const twilio = require('twilio');
-require('dotenv').config();
+const config = require('./config');
 
 let client = null;
 let isSmsConfigured = false;
 
-if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER) {
-  client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+if (config.sms.accountSid && config.sms.authToken && config.sms.fromNumber) {
+  client = twilio(config.sms.accountSid, config.sms.authToken);
   isSmsConfigured = true;
 }
 
@@ -22,7 +23,7 @@ async function sendSms(to, body) {
   }
 
   await client.messages.create({
-    from: process.env.TWILIO_FROM_NUMBER,
+    from: config.sms.fromNumber,
     to,
     body
   });

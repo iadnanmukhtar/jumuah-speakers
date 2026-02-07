@@ -16,3 +16,4 @@ function getLastSpeakerUpdateDate(schedules = []) {
 module.exports = {
   getLastSpeakerUpdateDate
 };
+// @ts-check

@@ -18,3 +18,4 @@ module.exports = {
   blockIfReadOnly,
   readOnlyMode
 };
+// @ts-check

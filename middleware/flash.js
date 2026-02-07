@@ -12,3 +12,4 @@ function flashMiddleware(req, res, next) {
 }
 
 module.exports = flashMiddleware;
+// @ts-check

@@ -1,11 +1,8 @@
-function parseFlag(value) {
-  if (!value) return false;
-  const normalized = String(value).trim().toLowerCase();
-  return ['1', 'true', 'yes', 'on'].includes(normalized);
-}
+const config = require('../config');
 
-const readOnlyMode = parseFlag(process.env.DISABLE_EDITING);
+const readOnlyMode = config.flags.readOnly;
 
 module.exports = {
   readOnlyMode
 };
+// @ts-check

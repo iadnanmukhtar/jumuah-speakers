@@ -1,12 +1,13 @@
+// @ts-check
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const db = require('../db');
 const { ensureAuthenticated } = require('../middleware/auth');
 const { blockIfReadOnly } = require('../middleware/readOnly');
 const { getUpcomingSchedules, partitionUpcoming } = require('../services/scheduleService');
 const { getLastSpeakerUpdateDate } = require('../utils/scheduleStats');
-const { normalizePhone } = require('../utils/phone');
+const { normalizePhone, phoneVariants } = require('../utils/phone');
+const { saveAvatar } = require('../utils/avatar');
+/** @typedef {import('../types').User} User */
 
 const router = express.Router();
 
@@ -93,31 +94,33 @@ router.get('/login', (req, res) => {
 router.post('/login/speaker', (req, res) => {
   const { phone } = req.body;
   const normalizedPhone = normalizePhone(phone);
-  const rawDigits = String(phone || '').replace(/\D/g, '');
-  const normalizedDigits = normalizedPhone.replace(/\D/g, '');
-  const phoneDigitsNoCountry =
-    normalizedDigits.length === 11 && normalizedDigits.startsWith('1')
-      ? normalizedDigits.slice(1)
-      : normalizedDigits;
+  // Build a few normalized digit variants to tolerate formatting differences.
+  const digitVariants = phoneVariants(phone);
 
   if (!normalizedPhone) {
     req.session.flash = { type: 'error', message: 'Phone is required.' };
     return res.redirect('/login');
   }
 
+  if (!digitVariants.length) {
+    req.session.flash = { type: 'error', message: 'Please enter a valid phone number.' };
+    return res.redirect('/login');
+  }
+
+  const placeholders = digitVariants.map(() => '?').join(', ');
+
   db.query(
     `
-      SELECT * FROM users
-      WHERE is_admin = 0
+      SELECT *
+      FROM users
+      WHERE (is_admin IS NULL OR is_admin = 0)
         AND (
           phone = ?
-          OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '') = ?
-          OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '') = ?
-          OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '') = ?
+          OR REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '') IN (${placeholders})
         )
       LIMIT 1
     `,
-    [normalizedPhone, normalizedDigits, phoneDigitsNoCountry, rawDigits],
+    [normalizedPhone, ...digitVariants],
     (err, results) => {
       if (err || !results || results.length === 0) {
         console.error(err);
@@ -128,6 +131,7 @@ router.post('/login/speaker', (req, res) => {
       const user = results[0];
       const sessionPhone = normalizePhone(user.phone) || user.phone;
 
+      /** @type {User} */
       req.session.user = {
         id: user.id,
         name: user.name,
@@ -177,6 +181,7 @@ router.post('/login/admin', (req, res) => {
         return res.redirect('/login');
       }
 
+      /** @type {User} */
       req.session.user = {
         id: user.id,
         name: user.name,
@@ -245,49 +250,11 @@ router.post('/profile', ensureAuthenticated, blockIfReadOnly('/profile'), (req, 
     let avatarUrl = existingAvatar || req.session.user.avatar_url || null;
     const uploadData = (avatar_data || '').trim();
 
-    if (uploadData) {
-      const match = uploadData.match(/^data:image\/(png|jpe?g);base64,(.+)$/i);
-      if (!match) {
-        req.session.flash = { type: 'error', message: 'Profile photo must be a PNG or JPG.' };
-        return res.redirect('/profile');
-      }
-
-      const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
-      const base64Data = match[2];
-      let buffer;
-      try {
-        buffer = Buffer.from(base64Data, 'base64');
-      } catch (e) {
-        console.error('Error decoding avatar data', e);
-        req.session.flash = { type: 'error', message: 'Could not process profile photo.' };
-        return res.redirect('/profile');
-      }
-
-      const maxBytes = 1.5 * 1024 * 1024; // ~1.5MB
-      if (!buffer || buffer.length === 0 || buffer.length > maxBytes) {
-        req.session.flash = { type: 'error', message: 'Profile photo is too large. Please use a smaller image.' };
-        return res.redirect('/profile');
-      }
-
-      const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-      try {
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-        const fileName = `avatar-${userId}-${Date.now()}.${ext}`;
-        const filePath = path.join(uploadDir, fileName);
-        fs.writeFileSync(filePath, buffer);
-
-        // Clean up previous avatar if it lives in /uploads
-        if (avatarUrl && avatarUrl.startsWith('/uploads/')) {
-          const oldPath = path.join(uploadDir, path.basename(avatarUrl));
-          fs.unlink(oldPath, () => {});
-        }
-
-        avatarUrl = `/uploads/${fileName}`;
-      } catch (e) {
-        console.error('Error saving avatar', e);
-        req.session.flash = { type: 'error', message: 'Could not save profile photo.' };
-        return res.redirect('/profile');
-      }
+    try {
+      avatarUrl = saveAvatar(userId, uploadData, avatarUrl);
+    } catch (e) {
+      req.session.flash = { type: 'error', message: e.message || 'Could not save profile photo.' };
+      return res.redirect('/profile');
     }
 
     const sql = `

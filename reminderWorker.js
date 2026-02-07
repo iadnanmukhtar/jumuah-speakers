@@ -1,5 +1,4 @@
-require('dotenv').config();
-
+// @ts-check
 const cron = require('node-cron');
 const db = require('./db');
 const { notifySpeaker, notifyAdmin } = require('./notify');
@@ -9,6 +8,7 @@ const { formatDateLong, formatTime } = require('./utils/viewHelpers');
 function startReminderWorker() {
   const HOUR = 60 * 60 * 1000;
 
+  // Every 10 minutes: check confirmed slots and send 24h / 6h reminders in tight windows.
   cron.schedule('*/10 * * * *', () => {
     const now = new Date();
 
@@ -77,6 +77,7 @@ function startReminderWorker() {
     );
   });
 
+  // Mon/Wed/Fri 8am: email admins a snapshot of coverage for the next 3 Fridays.
   cron.schedule('0 8 * * 1,3,5', async () => {
     try {
       const { schedules } = await getUpcomingSchedules(21);

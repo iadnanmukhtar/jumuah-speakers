@@ -6,3 +6,4 @@ function viewLocals(req, res, next) {
 }
 
 module.exports = viewLocals;
+// @ts-check
