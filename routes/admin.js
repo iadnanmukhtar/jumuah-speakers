@@ -151,13 +151,14 @@ router.post('/admin/schedules', ensureAuthenticated, ensureAdmin, blockIfReadOnl
 
   const finalSpeakerId = speaker_id && speaker_id !== '' ? speaker_id : null;
   const status = finalSpeakerId ? 'confirmed' : 'open';
+  const finalEventType = 'custom';
 
   const sql = `
-    INSERT INTO schedules (date, time, topic, notes, status, speaker_id)
-    VALUES (?, ?, ?, '', ?, ?)
+    INSERT INTO schedules (date, time, topic, notes, event_type, status, speaker_id)
+    VALUES (?, ?, ?, '', ?, ?, ?)
   `;
 
-  db.query(sql, [date, time, topic || '', status, finalSpeakerId], err => {
+  db.query(sql, [date, time, topic || '', finalEventType, status, finalSpeakerId], err => {
     if (err) {
       console.error(err);
       req.session.flash = { type: 'error', message: 'Could not create schedule.' };
@@ -212,21 +213,22 @@ router.get('/admin/schedules/:id/edit', ensureAuthenticated, ensureAdmin, (req, 
 
 router.post('/admin/schedules/:id/edit', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/schedules'), (req, res) => {
   const id = req.params.id;
-  const { date, time, topic, notes, status, speaker_id } = req.body;
+  const { date, time, topic, notes, status, speaker_id, event_type } = req.body;
 
   const finalSpeakerId = speaker_id && speaker_id !== '' ? speaker_id : null;
   const finalStatus = status || (finalSpeakerId ? 'confirmed' : 'open');
+  const finalEventType = event_type === 'custom' ? 'custom' : 'jumuah';
 
   const sql = `
     UPDATE schedules
-    SET date = ?, time = ?, topic = ?, notes = ?, status = ?, speaker_id = ?,
+    SET date = ?, time = ?, topic = ?, notes = ?, event_type = ?, status = ?, speaker_id = ?,
         reminder_24_sent = 0, reminder_6_sent = 0
     WHERE id = ?
   `;
 
   db.query(
     sql,
-    [date, time, topic || '', notes || '', finalStatus, finalSpeakerId, id],
+    [date, time, topic || '', notes || '', finalEventType, finalStatus, finalSpeakerId, id],
     err => {
       if (err) {
         console.error(err);

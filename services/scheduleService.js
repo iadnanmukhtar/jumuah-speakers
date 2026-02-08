@@ -53,8 +53,8 @@ function ensureUpcomingJumuahs(callback) {
       let remaining = toInsert.length;
       toInsert.forEach(s => {
         db.query(
-          `INSERT INTO schedules (date, time, topic, notes, status)
-           VALUES (?, ?, '', '', 'open')`,
+          `INSERT INTO schedules (date, time, topic, notes, event_type, status)
+           VALUES (?, ?, '', '', 'jumuah', 'open')`,
           [s.date, s.time],
           err2 => {
             if (err2) console.error('Error inserting auto schedule', err2);
@@ -82,6 +82,26 @@ function getDateRange(daysAhead) {
   };
 }
 
+function getWeekRange(weekOffset = 0) {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const day = start.getDay(); // 0 = Sunday
+
+  // Move to the beginning of the requested week.
+  start.setDate(start.getDate() - day + weekOffset * 7);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  return {
+    start,
+    end,
+    startStr: start.toISOString().split('T')[0],
+    endStr: end.toISOString().split('T')[0],
+    weekOffset
+  };
+}
+
 function fetchSchedules({ startStr, endStr, limit }) {
   return new Promise((resolve, reject) => {
     const sql = `
@@ -106,6 +126,13 @@ async function getUpcomingSchedules(daysAhead = 21, limit) {
   await new Promise(resolve => ensureUpcomingJumuahs(() => resolve()));
   const range = getDateRange(daysAhead);
   const schedules = await fetchSchedules({ ...range, limit });
+  return { schedules, range };
+}
+
+async function getWeeklySchedules(weekOffset = 0) {
+  await new Promise(resolve => ensureUpcomingJumuahs(() => resolve()));
+  const range = getWeekRange(weekOffset);
+  const schedules = await fetchSchedules({ ...range });
   return { schedules, range };
 }
 
@@ -140,5 +167,7 @@ function partitionUpcoming(schedules) {
 module.exports = {
   ensureUpcomingJumuahs,
   getUpcomingSchedules,
+  getWeeklySchedules,
+  getWeekRange,
   partitionUpcoming
 };

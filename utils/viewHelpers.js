@@ -41,12 +41,35 @@ function sameDay(a, b) {
     && a.getDate() === b.getDate();
 }
 
+/**
+ * Build hero slots for Jumuah events within a given list of items.
+ * Picks the earliest Jumuah date and returns all Jumuah slots on that day.
+ * @param {Array<any>} items
+ * @returns {Array<any>}
+ */
+function buildHeroSlots(items = []) {
+  const jumuahItems = (items || [])
+    .filter(i => (i?.event_type || 'jumuah') === 'jumuah')
+    .sort((a, b) => {
+      const da = toDate(a?.date) || new Date(0);
+      const db = toDate(b?.date) || new Date(0);
+      if (da.getTime() !== db.getTime()) return da - db;
+      return String(a?.time || '').localeCompare(String(b?.time || ''));
+    });
+
+  if (!jumuahItems.length) return [];
+
+  const firstDate = toDate(jumuahItems[0].date);
+  return jumuahItems.filter(i => sameDay(toDate(i.date), firstDate));
+}
+
 module.exports = {
   formatDateLong,
   formatDateShort,
   formatTime,
   initials,
   toDate,
-  sameDay
+  sameDay,
+  buildHeroSlots
 };
 // @ts-check

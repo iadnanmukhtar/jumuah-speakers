@@ -9,6 +9,7 @@
         <tr class="bg-emerald-50 text-emerald-900">
           <th class="py-2 px-3 text-left">Date</th>
           <th class="py-2 px-3 text-left">Time</th>
+          <th class="py-2 px-3 text-left">Type</th>
           <th class="py-2 px-3 text-left">Speaker</th>
           <th class="py-2 px-3 text-left">Topic</th>
           <th class="py-2 px-3 text-left">Status</th>
@@ -19,6 +20,14 @@
           <tr class="border-b border-slate-100">
             <td class="py-2 px-3"><%= formatDateLong(s.date) %></td>
             <td class="py-2 px-3"><%= formatTime(s.time) %></td>
+            <td class="py-2 px-3">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border
+                <%= (s.event_type || 'jumuah') === 'jumuah'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-100'
+                    : 'bg-amber-50 text-amber-800 border-amber-100' %>">
+                <%= (s.event_type || 'jumuah') === 'jumuah' ? 'Jumuah' : 'Custom' %>
+              </span>
+            </td>
             <td class="py-2 px-3">
               <div class="flex items-center gap-2">
                 <div class="h-8 w-8 rounded-full overflow-hidden bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 font-semibold">
@@ -44,5 +53,9 @@
         <% }) %>
       </tbody>
     </table>
+  </div>
+<% } else { %>
+  <div class="hidden sm:block text-sm text-slate-500 px-1 py-2">
+    No additional events to show.
   </div>
 <% } %>

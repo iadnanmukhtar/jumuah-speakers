@@ -1,5 +1,8 @@
 <%
-  const hasAny = (upcomingSlots && upcomingSlots.length) || (remaining && remaining.length);
+  const allItems = [...(upcomingSlots || []), ...(remaining || [])];
+  const hasAny = allItems.length > 0;
+  const heroSlots = helpers.buildHeroSlots(allItems);
+  const listItems = allItems.filter(i => !heroSlots.includes(i));
 %>
 
 <section class="max-w-3xl mx-auto mt-10 grid gap-6 md:grid-cols-2">
@@ -69,9 +72,9 @@
     <div class="p-6 sm:p-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p class="text-xs uppercase tracking-wide text-emerald-100">Public schedule</p>
-        <h2 class="text-2xl font-semibold">Upcoming Jumuahs</h2>
+        <h2 class="text-2xl font-semibold">Upcoming Events</h2>
         <p class="text-sm text-emerald-50 mt-1">
-          Snapshot of the next three Fridays at Masjid al-Husna
+          Events for the selected week at Masjid al-Husna
         </p>
       </div>
       <a
@@ -81,17 +84,29 @@
       </a>
     </div>
 
-    <%- include('partials/scheduleHero', { upcomingSlots }) %>
+    <div class="px-6 sm:px-8 pb-4 flex items-center justify-between text-sm text-white/90">
+      <a href="<%= prevLink %>" class="inline-flex items-center gap-2 hover:text-white">
+        <span class="text-lg">←</span>
+        <span>Previous week</span>
+      </a>
+      <div class="text-xs uppercase tracking-wide text-white/80">
+        <%= range ? `${helpers.formatDateLong(range.start)} — ${helpers.formatDateLong(range.end)}` : '' %>
+      </div>
+      <a href="<%= nextLink %>" class="inline-flex items-center gap-2 hover:text-white">
+        <span>Next week</span>
+        <span class="text-lg">→</span>
+      </a>
+    </div>
+
+    <%- include('partials/scheduleHero', { heroSlots }) %>
   </div>
 
   <div class="bg-white rounded-xl shadow-sm border border-emerald-100 p-5">
     <% if (!hasAny) { %>
       <p class="text-sm text-slate-500">Schedules will appear here once generated.</p>
-    <% } else if (!remaining || remaining.length === 0) { %>
-      <p class="text-sm text-slate-600">No additional slots beyond the upcoming Jumuah.</p>
     <% } else { %>
-      <%- include('partials/scheduleCards', { items: remaining }) %>
-      <%- include('partials/scheduleTable', { items: remaining }) %>
+      <%- include('partials/scheduleCards', { items: listItems }) %>
+      <%- include('partials/scheduleTable', { items: listItems }) %>
     <% } %>
   </div>
 </section>

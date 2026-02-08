@@ -3,7 +3,7 @@ const express = require('express');
 const db = require('../db');
 const { ensureAuthenticated } = require('../middleware/auth');
 const { blockIfReadOnly } = require('../middleware/readOnly');
-const { getUpcomingSchedules, partitionUpcoming } = require('../services/scheduleService');
+const { getUpcomingSchedules, getWeeklySchedules, partitionUpcoming } = require('../services/scheduleService');
 const { getLastSpeakerUpdateDate } = require('../utils/scheduleStats');
 const { normalizePhone, phoneVariants } = require('../utils/phone');
 const { saveAvatar } = require('../utils/avatar');
@@ -62,18 +62,28 @@ router.post('/register', blockIfReadOnly('/register'), (req, res) => {
 router.get('/login', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
 
-  getUpcomingSchedules(21, 12)
+  const weekOffset = parseInt(req.query.weekOffset || '0', 10) || 0;
+
+  getWeeklySchedules(weekOffset)
     .then(({ schedules, range }) => {
       const viewModel = partitionUpcoming(schedules);
       const lastUpdated = getLastSpeakerUpdateDate(schedules);
       if (lastUpdated) {
         res.set('Last-Modified', new Date(lastUpdated).toUTCString());
       }
+
+      const basePath = '/login';
+      const prevOffset = weekOffset - 1;
+      const nextOffset = weekOffset + 1;
+
       res.render('login', {
         title: 'Masjid al-Husna Jumuah Speaker Scheduler',
         publicSchedules: schedules || [],
         range,
         lastUpdated,
+        weekOffset,
+        prevLink: `${basePath}?weekOffset=${prevOffset}`,
+        nextLink: `${basePath}?weekOffset=${nextOffset}`,
         ...viewModel
       });
     })
@@ -84,6 +94,9 @@ router.get('/login', (req, res) => {
         publicSchedules: [],
         range: null,
         lastUpdated: null,
+        weekOffset: 0,
+        prevLink: null,
+        nextLink: null,
         upcomingSlots: [],
         remaining: []
       });

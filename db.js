@@ -25,6 +25,7 @@ function initSchema() {
       time VARCHAR(10) NOT NULL,
       topic VARCHAR(255),
       notes TEXT,
+      event_type VARCHAR(20) NOT NULL DEFAULT 'jumuah',
       status VARCHAR(20) NOT NULL DEFAULT 'open',
       speaker_id INT,
       reminder_24_sent TINYINT NOT NULL DEFAULT 0,
@@ -32,15 +33,8 @@ function initSchema() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (speaker_id) REFERENCES users(id)
     );
-  `;
+  `; 
 
-  db.query(schemaSql, err => {
-    if (err) {
-      console.error('Error initializing schema', err);
-    } else {
-      console.log('Database schema ensured.');
-    }
-  });
 }
 
 function seedAdmin() {
