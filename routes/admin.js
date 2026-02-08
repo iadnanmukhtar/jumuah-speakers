@@ -142,19 +142,22 @@ router.get('/admin/schedules', ensureAuthenticated, ensureAdmin, (req, res) => {
 });
 
 router.post('/admin/schedules', ensureAuthenticated, ensureAdmin, blockIfReadOnly('/admin/schedules'), (req, res) => {
-  const { date, time, topic, notes } = req.body;
+  const { date, time, topic, speaker_id } = req.body;
 
   if (!date || !time) {
     req.session.flash = { type: 'error', message: 'Date and time are required.' };
     return res.redirect('/admin/schedules');
   }
 
+  const finalSpeakerId = speaker_id && speaker_id !== '' ? speaker_id : null;
+  const status = finalSpeakerId ? 'confirmed' : 'open';
+
   const sql = `
-    INSERT INTO schedules (date, time, topic, notes, status)
-    VALUES (?, ?, ?, ?, 'open')
+    INSERT INTO schedules (date, time, topic, notes, status, speaker_id)
+    VALUES (?, ?, ?, '', ?, ?)
   `;
 
-  db.query(sql, [date, time, topic || '', notes || ''], err => {
+  db.query(sql, [date, time, topic || '', status, finalSpeakerId], err => {
     if (err) {
       console.error(err);
       req.session.flash = { type: 'error', message: 'Could not create schedule.' };
