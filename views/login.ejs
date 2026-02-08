@@ -107,6 +107,19 @@
     <% } else { %>
       <%- include('partials/scheduleCards', { items: listItems }) %>
       <%- include('partials/scheduleTable', { items: listItems }) %>
+
+      <div class="mt-6 space-y-2">
+        <h3 class="text-sm font-semibold text-slate-800">Khutbah / Event Slides</h3>
+        <p class="text-xs text-slate-500">Slides provided by Masjid al-Husna. View or advance directly below.</p>
+        <div class="aspect-[16/9] w-full rounded-lg overflow-hidden border border-slate-200 shadow-sm">
+          <iframe
+            src="https://hadithunlocked.com/masjidalhusna-slides.html"
+            class="w-full h-full"
+            allowfullscreen
+            loading="lazy"
+            title="Masjid al-Husna Slides"></iframe>
+        </div>
+      </div>
     <% } %>
   </div>
 </section>
